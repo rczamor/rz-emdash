@@ -3,6 +3,10 @@ services:
     build: .
     ports:
       - "4321:4321"
+    environment:
+      RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY must be set in .env}
+      RESEND_FROM: ${RESEND_FROM:-onboarding@resend.dev}
+      RESEND_REPLY_TO: ${RESEND_REPLY_TO:-}
     volumes:
       - emdash-data:/app/data
       - emdash-uploads:/app/uploads
