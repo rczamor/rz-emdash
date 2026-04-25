@@ -1,17 +1,47 @@
 services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: emdash
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: emdash
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U emdash -d emdash"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   emdash:
+    image: emdash-emdash:latest
     build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "4321:4321"
     environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: emdash
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: emdash
       RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY must be set in .env}
       RESEND_FROM: ${RESEND_FROM:-onboarding@resend.dev}
       RESEND_REPLY_TO: ${RESEND_REPLY_TO:-}
     volumes:
-      - emdash-data:/app/data
       - emdash-uploads:/app/uploads
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.emdash.rule=Host(`emdash.srv1535988.hstgr.cloud`)"
+      - traefik.http.routers.emdash.entrypoints=web,websecure
+      - traefik.http.routers.emdash.tls=true
+      - traefik.http.routers.emdash.tls.certresolver=mytlschallenge
+      - traefik.http.services.emdash.loadbalancer.server.port=4321
     restart: unless-stopped
 
 volumes:
-  emdash-data:
+  postgres-data:
   emdash-uploads:

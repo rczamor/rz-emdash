@@ -42,7 +42,7 @@ export function createPlugin(options: ResendPluginOptions = {}): ResolvedPlugin 
 		id: "resend",
 		version: "0.0.1",
 
-		capabilities: ["network:fetch"],
+		capabilities: ["email:provide", "network:fetch"],
 		allowedHosts: ["api.resend.com"],
 
 		hooks: {

@@ -4,7 +4,7 @@ import { auditLogPlugin } from "@emdash-cms/plugin-audit-log";
 import { resendPlugin } from "@emdash-cms/plugin-resend";
 import { defineConfig, fontProviders } from "astro/config";
 import emdash, { local } from "emdash/astro";
-import { sqlite } from "emdash/db";
+import { postgres } from "emdash/db";
 
 export default defineConfig({
 	output: "server",
@@ -18,7 +18,10 @@ export default defineConfig({
 	integrations: [
 		react(),
 		emdash({
-			database: sqlite({ url: "file:./data.db" }),
+			// Empty config — pg.Pool reads PGHOST / PGUSER / PGPASSWORD / PGDATABASE
+			// / PGPORT from the runtime environment. Setting them at config time
+			// would bake values into the build at `astro build` time.
+			database: postgres({}),
 			storage: local({
 				directory: "./uploads",
 				baseUrl: "/_emdash/api/media/file",

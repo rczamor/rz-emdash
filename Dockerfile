@@ -13,15 +13,14 @@ COPY demos/ demos/
 COPY docs/package.json docs/package.json
 COPY e2e/fixture/package.json e2e/fixture/package.json
 
-RUN sed -i '/slidev/d' pnpm-workspace.yaml
+RUN sed -i -e '/slidev/d' -e '/blocks\/playground/d' pnpm-workspace.yaml
 RUN pnpm install --frozen-lockfile
 
 # ---- Build ----
 FROM deps AS build
 
 COPY . .
-RUN sed -i '/slidev/d' pnpm-workspace.yaml
-RUN sed -i 's|file:./data.db|file:./data/data.db|' templates/blog/astro.config.mjs
+RUN sed -i -e '/slidev/d' -e '/blocks\/playground/d' pnpm-workspace.yaml
 
 RUN pnpm build && pnpm --filter @emdash-cms/template-blog build
 
@@ -39,8 +38,10 @@ FROM node:22-slim
 WORKDIR /app
 COPY --from=build /deploy .
 
-RUN mkdir -p data uploads \
-    && ln -s /app/node_modules/.pnpm/node_modules/kysely /app/node_modules/kysely
+RUN mkdir -p uploads \
+    && ln -s /app/node_modules/.pnpm/node_modules/kysely /app/node_modules/kysely \
+    && ln -s /app/node_modules/.pnpm/node_modules/better-sqlite3 /app/node_modules/better-sqlite3 \
+    && ln -s /app/node_modules/.pnpm/node_modules/pg /app/node_modules/pg
 
 ENV HOST=0.0.0.0
 ENV PORT=4321
