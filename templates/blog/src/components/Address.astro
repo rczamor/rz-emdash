@@ -1,0 +1,159 @@
+---
+/**
+ * <Address /> — server-renders a country-correct address sub-form.
+ *
+ * Usage:
+ *
+ *   <Address country="US" prefix="shipping_" required />
+ *
+ * Reads the country spec from the address plugin and renders the
+ * matching set of inputs in the country's preferred order. Field
+ * names are prefixed (default "address_") so multiple addresses can
+ * coexist on the same page (shipping_, billing_, …).
+ *
+ * No client-side script. The component drops naked <input> elements
+ * into the surrounding form (typically a <Webform /> or your own
+ * <form>), so the parent form's submit handler picks them up
+ * automatically.
+ */
+
+interface FieldSpec {
+	name: string;
+	label: string;
+	required?: boolean;
+	helpText?: string;
+}
+
+interface CountrySpec {
+	code: string;
+	name: string;
+	fields: FieldSpec[];
+	subdivisions?: Array<{ value: string; label: string }>;
+	postalCodePattern?: string;
+}
+
+interface Props {
+	country: string;
+	prefix?: string;
+	required?: boolean;
+	heading?: string;
+}
+
+const { country, prefix = "address_", required, heading } = Astro.props;
+const baseUrl = Astro.site?.toString().replace(/\/$/, "") ?? Astro.url.origin;
+
+const AUTOCOMPLETE_MAP: Record<string, string> = {
+	recipient: "name",
+	organization: "organization",
+	addressLine1: "address-line1",
+	addressLine2: "address-line2",
+	locality: "address-level2",
+	administrativeArea: "address-level1",
+	postalCode: "postal-code",
+};
+function mapAutocomplete(field: string, p: string): string | undefined {
+	const section = p.replace(/_$/, "");
+	const token = AUTOCOMPLETE_MAP[field];
+	if (!token) return undefined;
+	return section ? `section-${section} ${token}` : token;
+}
+
+let spec: CountrySpec | null = null;
+let loadError: string | null = null;
+
+try {
+	const res = await fetch(
+		`${baseUrl}/_emdash/api/plugins/address/countries.get?code=${encodeURIComponent(country)}`,
+	);
+	if (res.ok) {
+		const json = await res.json();
+		const payload = json?.data ?? json;
+		if (payload?.ok && payload.country) {
+			spec = payload.country as CountrySpec;
+		} else {
+			loadError = payload?.error ?? "Country not found";
+		}
+	} else {
+		loadError = `Failed to load country (${res.status})`;
+	}
+} catch (err) {
+	loadError = err instanceof Error ? err.message : "Failed to load country";
+}
+---
+
+{
+	loadError ? (
+		<p class="address-error">Could not load address: {loadError}</p>
+	) : !spec ? null : (
+		<fieldset class="address-fieldset" data-address-prefix={prefix} data-address-country={spec.code}>
+			{heading ? <legend>{heading}</legend> : null}
+			{spec.fields.map((f) => {
+				const isRequired = f.required ?? required ?? false;
+				const inputName = `data.${prefix}${f.name}`;
+				const inputId = `field-${prefix}${f.name}`;
+
+				if (f.name === "administrativeArea" && spec!.subdivisions) {
+					return (
+						<div class="address-row">
+							<label for={inputId}>
+								{f.label}
+								{isRequired ? " *" : ""}
+							</label>
+							<select id={inputId} name={inputName} required={isRequired}>
+								<option value="">Select…</option>
+								{spec!.subdivisions!.map((s) => (
+									<option value={s.value}>{s.label}</option>
+								))}
+							</select>
+						</div>
+					);
+				}
+
+				return (
+					<div class="address-row">
+						<label for={inputId}>
+							{f.label}
+							{isRequired ? " *" : ""}
+						</label>
+						<input
+							id={inputId}
+							type="text"
+							name={inputName}
+							required={isRequired}
+							pattern={f.name === "postalCode" ? spec!.postalCodePattern : undefined}
+							autocomplete={mapAutocomplete(f.name, prefix)}
+						/>
+					</div>
+				);
+			})}
+			{/* Stash the country code as a hidden field so the consumer can re-format / validate. */}
+			<input type="hidden" name={`data.${prefix}country`} value={spec.code} />
+		</fieldset>
+	)
+}
+
+<style>
+	.address-fieldset {
+		display: grid;
+		gap: 0.5rem;
+		border: 1px solid var(--border, #ddd);
+		padding: 0.75rem 1rem;
+		border-radius: 0.25rem;
+	}
+	.address-fieldset legend {
+		padding: 0 0.25rem;
+		font-weight: 500;
+	}
+	.address-row {
+		display: grid;
+		gap: 0.25rem;
+	}
+	.address-row label {
+		font-size: 0.875rem;
+	}
+	.address-error {
+		color: var(--muted, #555);
+		font-style: italic;
+	}
+</style>
+

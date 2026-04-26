@@ -1,0 +1,59 @@
+---
+/**
+ * Contact page — demonstrates the <Webform /> and <Address /> components.
+ *
+ * To make this page work, an admin (or agent) must first create a form
+ * called "contact". One way:
+ *
+ *   curl -X POST http://localhost:4321/_emdash/api/plugins/webform/forms.upsert \
+ *     -H "Content-Type: application/json" -H "Cookie: <admin>" \
+ *     -d '{
+ *       "id": "contact",
+ *       "title": "Contact us",
+ *       "fields": [
+ *         { "name": "name",    "type": "text",     "label": "Name",    "required": true },
+ *         { "name": "email",   "type": "email",    "label": "Email",   "required": true },
+ *         { "name": "message", "type": "textarea", "label": "Message", "required": true }
+ *       ],
+ *       "notifications": [{
+ *         "to": "you@example.com",
+ *         "subject": "[{site.name}] Contact from {submission.name}",
+ *         "body": "{submission.message}"
+ *       }],
+ *       "confirmation": { "message": "Thanks — we will be in touch shortly." },
+ *       "enabled": true
+ *     }'
+ */
+
+export const prerender = false;
+
+import Base from "../layouts/Base.astro";
+import Webform from "../components/Webform.astro";
+---
+
+<Base title="Contact" description="Get in touch.">
+	<main class="contact-main">
+		<h1>Contact</h1>
+		<p>
+			Drop us a note. We read every message and get back within a couple of
+			business days.
+		</p>
+
+		<Webform id="contact" />
+	</main>
+</Base>
+
+<style>
+	.contact-main {
+		max-width: 48rem;
+		margin: 0 auto;
+		padding: 2rem 1rem;
+	}
+	h1 {
+		margin: 0 0 0.5rem;
+	}
+	h1 + p {
+		color: var(--muted, #555);
+		margin: 0 0 2rem;
+	}
+</style>

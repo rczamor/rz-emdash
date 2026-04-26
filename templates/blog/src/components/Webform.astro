@@ -1,0 +1,489 @@
+---
+/**
+ * <Webform /> — server-renders an emdash webform from its id.
+ *
+ * Usage:
+ *
+ *   <Webform id="contact" />
+ *
+ * Reads the form definition from the webform plugin at request time,
+ * renders the matching HTML inputs, and handles submission via a small
+ * inline script. The script POSTs JSON to /webform/submit, displays
+ * validation errors inline, and on success either redirects (if
+ * `confirmation.redirectUrl` is set) or replaces the form with the
+ * confirmation message.
+ *
+ * File-typed fields are uploaded via the plugin's /upload endpoint
+ * before the main submit, and the resulting FileRefs are included in
+ * the JSON payload.
+ */
+
+interface FieldOption {
+	value: string;
+	label: string;
+}
+
+interface FieldDef {
+	name: string;
+	type: string;
+	label: string;
+	required?: boolean;
+	placeholder?: string;
+	helpText?: string;
+	defaultValue?: string;
+	min?: number;
+	max?: number;
+	step?: number;
+	minLength?: number;
+	maxLength?: number;
+	pattern?: string;
+	options?: FieldOption[];
+	accept?: string;
+	multiple?: boolean;
+	visibleIf?: { field: string; op: string; value?: unknown };
+}
+
+interface FormStep {
+	id: string;
+	title: string;
+	description?: string;
+	fields: string[];
+}
+
+interface FormDefinition {
+	id: string;
+	title: string;
+	description?: string;
+	fields: FieldDef[];
+	steps?: FormStep[];
+	confirmation?: { message: string; redirectUrl?: string };
+	enabled: boolean;
+}
+
+interface Props {
+	id: string;
+	submitUrl?: string;
+	uploadUrl?: string;
+	showHeader?: boolean;
+}
+
+const { id, submitUrl, uploadUrl, showHeader = true } = Astro.props;
+
+const baseUrl = Astro.site?.toString().replace(/\/$/, "") ?? Astro.url.origin;
+const fetchUrl = `${baseUrl}/_emdash/api/plugins/webform/forms.get?id=${encodeURIComponent(id)}`;
+
+let form: FormDefinition | null = null;
+let loadError: string | null = null;
+
+try {
+	const res = await fetch(fetchUrl);
+	if (res.ok) {
+		const json = await res.json();
+		const payload = json?.data ?? json;
+		if (payload?.ok && payload.form) {
+			form = payload.form as FormDefinition;
+		} else {
+			loadError = payload?.error ?? "Form not found";
+		}
+	} else {
+		loadError = `Failed to load form (${res.status})`;
+	}
+} catch (err) {
+	loadError = err instanceof Error ? err.message : "Failed to load form";
+}
+
+const submitEndpoint = submitUrl ?? `${baseUrl}/_emdash/api/plugins/webform/submit`;
+const uploadEndpoint = uploadUrl ?? `${baseUrl}/_emdash/api/plugins/webform/upload`;
+---
+
+{
+	loadError ? (
+		<p class="webform-error">Could not load form &ldquo;{id}&rdquo;: {loadError}</p>
+	) : !form ? null : !form.enabled ? (
+		<p class="webform-disabled">This form is not currently accepting submissions.</p>
+	) : (
+		<form
+			class="webform"
+			method="POST"
+			action={submitEndpoint}
+			data-form-id={form.id}
+			data-confirmation-message={form.confirmation?.message ?? "Thanks for your submission"}
+			data-confirmation-redirect={form.confirmation?.redirectUrl ?? ""}
+			data-upload-url={uploadEndpoint}
+			novalidate
+		>
+			{showHeader ? (
+				<header class="webform-header">
+					<h2>{form.title}</h2>
+					{form.description ? <p>{form.description}</p> : null}
+				</header>
+			) : null}
+
+			<input type="hidden" name="data._hp" autocomplete="off" tabindex="-1" aria-hidden="true" />
+
+			{form.fields.map((field) => (
+				<div
+					class="webform-field"
+					data-field-name={field.name}
+					data-visible-if={field.visibleIf ? JSON.stringify(field.visibleIf) : null}
+				>
+					{field.type === "checkbox" ? (
+						<label class="webform-label inline">
+							<input type="checkbox" name={`data.${field.name}`} required={field.required} />
+							<span>{field.label}{field.required ? " *" : ""}</span>
+						</label>
+					) : field.type === "checkbox-group" || field.type === "radio" ? (
+						<fieldset>
+							<legend class="webform-label">
+								{field.label}
+								{field.required ? " *" : ""}
+							</legend>
+							{(field.options ?? []).map((opt) => (
+								<label class="webform-label inline">
+									<input
+										type={field.type === "checkbox-group" ? "checkbox" : "radio"}
+										name={
+											field.type === "checkbox-group"
+												? `data.${field.name}[]`
+												: `data.${field.name}`
+										}
+										value={opt.value}
+										required={field.required && field.type === "radio"}
+									/>
+									<span>{opt.label}</span>
+								</label>
+							))}
+						</fieldset>
+					) : field.type === "select" ? (
+						<>
+							<label class="webform-label" for={`field-${field.name}`}>
+								{field.label}
+								{field.required ? " *" : ""}
+							</label>
+							<select
+								id={`field-${field.name}`}
+								name={`data.${field.name}`}
+								required={field.required}
+							>
+								<option value="">Select…</option>
+								{(field.options ?? []).map((opt) => (
+									<option value={opt.value}>{opt.label}</option>
+								))}
+							</select>
+						</>
+					) : field.type === "textarea" || field.type === "html" ? (
+						<>
+							<label class="webform-label" for={`field-${field.name}`}>
+								{field.label}
+								{field.required ? " *" : ""}
+							</label>
+							<textarea
+								id={`field-${field.name}`}
+								name={`data.${field.name}`}
+								required={field.required}
+								placeholder={field.placeholder}
+								rows={6}
+								minlength={field.minLength}
+								maxlength={field.maxLength}
+							>{field.defaultValue ?? ""}</textarea>
+						</>
+					) : field.type === "hidden" ? (
+						<input
+							type="hidden"
+							name={`data.${field.name}`}
+							value={field.defaultValue ?? ""}
+						/>
+					) : field.type === "file" ? (
+						<>
+							<label class="webform-label" for={`field-${field.name}`}>
+								{field.label}
+								{field.required ? " *" : ""}
+							</label>
+							<input
+								id={`field-${field.name}`}
+								type="file"
+								name={`file.${field.name}`}
+								accept={field.accept}
+								multiple={field.multiple}
+								required={field.required}
+							/>
+						</>
+					) : (
+						<>
+							<label class="webform-label" for={`field-${field.name}`}>
+								{field.label}
+								{field.required ? " *" : ""}
+							</label>
+							<input
+								id={`field-${field.name}`}
+								type={field.type}
+								name={`data.${field.name}`}
+								required={field.required}
+								placeholder={field.placeholder}
+								value={field.defaultValue}
+								min={field.min}
+								max={field.max}
+								step={field.step}
+								minlength={field.minLength}
+								maxlength={field.maxLength}
+								pattern={field.pattern}
+							/>
+						</>
+					)}
+					{field.helpText ? <p class="webform-help">{field.helpText}</p> : null}
+					<p class="webform-error-text" data-error-for={field.name} hidden></p>
+				</div>
+			))}
+
+			<div class="webform-actions">
+				<button type="submit">Submit</button>
+				<p class="webform-status" role="status" aria-live="polite"></p>
+			</div>
+		</form>
+	)
+}
+
+<script>
+	type Visibility = { field: string; op: string; value?: unknown };
+
+	function setupForm(form: HTMLFormElement) {
+		const formId = form.dataset.formId!;
+		const confirmation = form.dataset.confirmationMessage ?? "Thanks!";
+		const redirectUrl = form.dataset.confirmationRedirect ?? "";
+		const uploadUrl = form.dataset.uploadUrl!;
+		const status = form.querySelector<HTMLParagraphElement>(".webform-status");
+		const fields = Array.from(form.querySelectorAll<HTMLElement>(".webform-field"));
+
+		const visibilityRules = fields
+			.map((row) => {
+				const raw = row.dataset.visibleIf;
+				if (!raw) return null;
+				try {
+					return { row, rule: JSON.parse(raw) as Visibility };
+				} catch {
+					return null;
+				}
+			})
+			.filter((x): x is { row: HTMLElement; rule: Visibility } => x !== null);
+
+		function readField(name: string): unknown {
+			const ctrls = form.querySelectorAll<HTMLInputElement>(
+				`[name="data.${name}"], [name="data.${name}[]"]`,
+			);
+			if (ctrls.length === 0) return undefined;
+			if (ctrls.length === 1) {
+				const c = ctrls[0]!;
+				if (c.type === "checkbox") return c.checked;
+				return c.value;
+			}
+			const checked = Array.from(ctrls).filter((c) => c.checked).map((c) => c.value);
+			return checked;
+		}
+
+		function shouldShow(rule: Visibility): boolean {
+			const value = readField(rule.field);
+			switch (rule.op) {
+				case "eq":
+					return value === rule.value;
+				case "ne":
+					return value !== rule.value;
+				case "in":
+					return Array.isArray(rule.value) && rule.value.includes(value);
+				case "notIn":
+					return Array.isArray(rule.value) && !rule.value.includes(value);
+				case "contains":
+					return String(value ?? "").includes(String(rule.value ?? ""));
+				case "empty":
+					return value == null || value === "" || (Array.isArray(value) && value.length === 0);
+				case "notEmpty":
+					return value != null && value !== "" && !(Array.isArray(value) && value.length === 0);
+				default:
+					return true;
+			}
+		}
+
+		function applyVisibility() {
+			for (const { row, rule } of visibilityRules) {
+				row.hidden = !shouldShow(rule);
+			}
+		}
+		form.addEventListener("input", applyVisibility);
+		applyVisibility();
+
+		function clearForm() {
+			while (form.firstChild) form.removeChild(form.firstChild);
+		}
+
+		function showConfirmation(message: string) {
+			clearForm();
+			const p = document.createElement("p");
+			p.className = "webform-confirmation";
+			p.textContent = message;
+			form.appendChild(p);
+		}
+
+		form.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			if (status) status.textContent = "Submitting…";
+			form
+				.querySelectorAll<HTMLElement>(".webform-error-text")
+				.forEach((el) => {
+					el.hidden = true;
+					el.textContent = "";
+				});
+
+			const fd = new FormData(form);
+			const data: Record<string, unknown> = {};
+
+			for (const [key, value] of fd.entries()) {
+				if (key.startsWith("file.") && value instanceof File && value.size > 0) {
+					const fieldName = key.slice("file.".length);
+					const upload = new FormData();
+					upload.set("formId", formId);
+					upload.set("field", fieldName);
+					upload.set("file", value);
+					try {
+						const res = await fetch(uploadUrl, { method: "POST", body: upload });
+						const json = await res.json();
+						const payload = json?.data ?? json;
+						if (!payload?.ok) {
+							if (status) {
+								status.textContent = `Upload failed: ${payload?.error ?? "unknown"}`;
+							}
+							return;
+						}
+						data[fieldName] = payload.ref;
+					} catch (err) {
+						if (status) status.textContent = `Upload error: ${(err as Error).message}`;
+						return;
+					}
+				}
+			}
+
+			for (const [key, value] of fd.entries()) {
+				if (key.startsWith("data.") && !key.endsWith("[]")) {
+					data[key.slice("data.".length)] = value;
+				}
+				if (key.endsWith("[]")) {
+					const name = key.slice("data.".length, -2);
+					const arr = (data[name] as string[]) ?? [];
+					arr.push(String(value));
+					data[name] = arr;
+				}
+			}
+
+			try {
+				const res = await fetch(form.action, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ formId, data }),
+				});
+				const json = await res.json();
+				const payload = json?.data ?? json;
+				if (payload?.ok) {
+					const message = payload.confirmation?.message ?? confirmation;
+					const redirect = payload.confirmation?.redirectUrl ?? redirectUrl;
+					if (redirect) {
+						window.location.href = redirect;
+						return;
+					}
+					showConfirmation(String(message));
+				} else if (payload?.errors) {
+					for (const [name, msg] of Object.entries(payload.errors)) {
+						const el = form.querySelector<HTMLElement>(`[data-error-for="${name}"]`);
+						if (el) {
+							el.textContent = String(msg);
+							el.hidden = false;
+						}
+					}
+					if (status) status.textContent = "Please fix the errors above.";
+				} else {
+					if (status) status.textContent = `Error: ${payload?.error ?? "unknown"}`;
+				}
+			} catch (err) {
+				if (status) status.textContent = `Network error: ${(err as Error).message}`;
+			}
+		});
+	}
+
+	document.querySelectorAll<HTMLFormElement>("form.webform").forEach(setupForm);
+</script>
+
+<style>
+	.webform {
+		display: grid;
+		gap: 1rem;
+		max-width: 36rem;
+	}
+	.webform-header h2 {
+		margin: 0 0 0.25rem;
+	}
+	.webform-header p {
+		margin: 0;
+		color: var(--muted, #555);
+	}
+	.webform-field {
+		display: grid;
+		gap: 0.25rem;
+	}
+	.webform-label {
+		font-weight: 500;
+	}
+	.webform-label.inline {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-weight: normal;
+	}
+	.webform-help {
+		margin: 0.125rem 0 0;
+		font-size: 0.875rem;
+		color: var(--muted, #555);
+	}
+	.webform-error-text {
+		margin: 0.125rem 0 0;
+		font-size: 0.875rem;
+		color: #c00;
+	}
+	.webform-status {
+		margin: 0.5rem 0 0;
+		font-size: 0.875rem;
+		color: var(--muted, #555);
+	}
+	.webform-actions button {
+		font-size: 1rem;
+		padding: 0.5rem 1.25rem;
+	}
+	.webform-confirmation {
+		padding: 0.75rem;
+		border-radius: 0.25rem;
+		background: rgba(0, 128, 0, 0.08);
+		color: #060;
+	}
+	.webform-error,
+	.webform-disabled {
+		color: var(--muted, #555);
+		font-style: italic;
+	}
+	input,
+	select,
+	textarea {
+		font: inherit;
+		padding: 0.5rem;
+		border: 1px solid var(--border, #ddd);
+		border-radius: 0.25rem;
+	}
+	textarea {
+		resize: vertical;
+	}
+	fieldset {
+		display: grid;
+		gap: 0.25rem;
+		border: 1px solid var(--border, #ddd);
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.25rem;
+	}
+	legend {
+		padding: 0 0.25rem;
+	}
+</style>
