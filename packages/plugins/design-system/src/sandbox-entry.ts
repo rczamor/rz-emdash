@@ -22,9 +22,46 @@ import {
 	validateDesignSystem,
 } from "./parse.js";
 import type { ParsedDesignSystem, ValidationReport } from "./types.js";
+import { DesignWatcher } from "./watcher.js";
 
 const PARSED_KV = "cache:parsed";
 const REPORT_KV = "cache:report";
+const SOURCE_KV = "cache:source";
+const WATCH_PATH_KV = "cache:watch_path";
+
+let watcher: DesignWatcher | null = null;
+
+function startWatcher(ctx: PluginContext): void {
+	if (watcher) return;
+	watcher = new DesignWatcher({
+		onChange: async (source, path) => {
+			try {
+				const parsed = parseDesignSystem(source);
+				const report = validateDesignSystem(parsed);
+				await ctx.kv.set(PARSED_KV, parsed);
+				await ctx.kv.set(REPORT_KV, report);
+				await ctx.kv.set(SOURCE_KV, source);
+				await ctx.kv.set(WATCH_PATH_KV, path);
+				const errors = report.findings.filter((f) => f.level === "error").length;
+				const warnings = report.findings.filter((f) => f.level === "warning").length;
+				ctx.log.info("Design system: parsed from filesystem", {
+					path,
+					errors,
+					warnings,
+				});
+			} catch (err) {
+				ctx.log.error("Design system: parse on watch failed", {
+					path,
+					error: err instanceof Error ? err.message : String(err),
+				});
+			}
+		},
+		onError: (err) => {
+			ctx.log.warn("Design system: watcher error", { error: err.message });
+		},
+	});
+	watcher.start();
+}
 
 interface RouteCtx {
 	input: unknown;
@@ -141,6 +178,12 @@ export default definePlugin({
 		"plugin:install": {
 			handler: async (_event, ctx: PluginContext) => {
 				ctx.log.info("Design system plugin installed");
+				startWatcher(ctx);
+			},
+		},
+		"plugin:activate": {
+			handler: async (_event, ctx: PluginContext) => {
+				startWatcher(ctx);
 			},
 		},
 	},
@@ -156,7 +199,29 @@ export default definePlugin({
 				const report = validateDesignSystem(parsed);
 				await ctx.kv.set(PARSED_KV, parsed);
 				await ctx.kv.set(REPORT_KV, report);
+				await ctx.kv.set(SOURCE_KV, body.source);
 				return { ok: true, report };
+			},
+		},
+
+		"design.reload": {
+			handler: async (_routeCtx: RouteCtx, ctx: PluginContext) => {
+				if (!watcher) startWatcher(ctx);
+				if (!watcher) return { ok: false, error: "Watcher unavailable (no fs access)" };
+				return await watcher.reload();
+			},
+		},
+
+		"design.watch.status": {
+			handler: async (_routeCtx: RouteCtx, ctx: PluginContext) => {
+				const path = await ctx.kv.get<string>(WATCH_PATH_KV);
+				const candidates = watcher?.candidatePaths() ?? [];
+				return {
+					ok: true,
+					watching: Boolean(path),
+					path: path ?? null,
+					candidates,
+				};
 			},
 		},
 

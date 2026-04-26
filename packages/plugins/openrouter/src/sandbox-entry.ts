@@ -161,6 +161,7 @@ async function runAgentAwareChat(
 				completionInput: { ...body, model, messages, tools },
 				config,
 				taskId: body.task_id,
+				agentId: body.agent_id,
 			},
 			ctx,
 		);

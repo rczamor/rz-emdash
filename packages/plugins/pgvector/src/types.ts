@@ -1,15 +1,15 @@
 /**
  * pgvector plugin types.
  *
- * Embeddings are stored in a dedicated table `pgvector_embeddings` in
- * the same Postgres instance emdash core uses (same PG* env vars).
- * The plugin owns its schema — pg.Pool is opened directly rather
- * than going through plugin storage, because plugin storage can't
- * declare custom column types like `vector(N)` or HNSW indexes.
+ * Embeddings are partitioned across one table per dimension —
+ * `pgvector_embeddings_<N>` — so an install can hold 1536-dim
+ * OpenAI vectors alongside, say, 3072-dim large vectors and have
+ * each indexed correctly.
  *
- * Single dimension per install (configurable via plugin options).
- * Default 1536 (OpenAI text-embedding-3-small / voyage-3-lite).
+ * Tables are auto-created on first use of a dimension.
  */
+
+export type IndexType = "hnsw" | "ivfflat";
 
 export interface EmbeddingRecord {
 	id: string;
@@ -36,6 +36,8 @@ export interface SearchInput {
 	k?: number;
 	source_collection?: string;
 	metric?: "cosine" | "l2" | "ip";
+	/** JSONB containment filter on the metadata column. */
+	metadata?: Record<string, unknown>;
 }
 
 export interface SearchResult {
@@ -49,4 +51,14 @@ export interface SearchResult {
 export interface CollectionStats {
 	collection: string;
 	count: number;
+	byDimension: Record<string, number>;
+}
+
+export interface AutoEmbedConfig {
+	/** Content fields to concatenate into the embedding input (in order). */
+	fields: string[];
+	/** Embedding model to call via openrouter. */
+	model: string;
+	/** Field name on the content item that supplies the source_id. Defaults to "id". */
+	idField?: string;
 }

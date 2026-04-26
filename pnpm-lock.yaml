@@ -1457,6 +1457,9 @@ importers:
 
   packages/plugins/pgvector:
     dependencies:
+      '@emdash-cms/plugin-tools':
+        specifier: workspace:*
+        version: link:../tools
       emdash:
         specifier: workspace:>=0.7.0
         version: link:../../core

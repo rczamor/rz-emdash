@@ -107,21 +107,59 @@ Fetch a versioned prompt and stash in KV for downstream actions:
 Combine with the existing `llm:chat` action (which pulls from KV via
 the tokens resolver) for prompt-managed agents.
 
-## Auto-tracing OpenRouter calls (NOT v1)
+## Auto-tracing via the provider-agnostic event bus
 
-Phase 1 of this plugin doesn't auto-instrument OpenRouter calls.
-Each LLM call records cost on the Task, but the request/response
-content isn't sent to Langfuse automatically. To trace, you currently:
+Langfuse doesn't depend on OpenRouter. Any LLM gateway plugin
+(OpenRouter, LiteLLM, a direct Anthropic SDK wrapper, …) dispatches
+three provider-agnostic events into the Automations engine:
 
-1. Fire `langfuse:trace` manually from your routine **before** the
-   LLM call, capture the `traceId`.
-2. Pass `traceId` through to your LLM action somehow (today there's
-   no first-class field for this — would need a tokens-based shim).
-3. After the call, fire `langfuse:score` with results.
+```
+llm:call-started     payload: { provider, model, messages, tools?, taskId?, agentId?, iteration, startedAt }
+llm:call-finished    payload: { provider, model, input, output, usage, taskId?, agentId?, durationMs, finishReason? }
+llm:call-failed      payload: { provider, model, taskId?, agentId?, iteration, error, durationMs }
+```
 
-**Roadmap:** Phase 3 will add a hook in OpenRouter's chat-loop that
-calls `submitGeneration` automatically when this plugin is detected.
-For now, manual.
+Langfuse subscribes via routine — no code coupling. Drop this routine
+in to auto-trace every LLM call regardless of which provider plugin
+emitted it:
+
+```json
+{
+  "id": "auto-trace-llm",
+  "name": "Auto-trace every LLM call to Langfuse",
+  "trigger": { "on": "llm:call-finished" },
+  "actions": [{
+    "type": "langfuse:trace",
+    "name": "{event.provider}/{event.model}",
+    "userId": "agent:{event.agentId|default:system}",
+    "taskId": "{event.taskId}",
+    "tags": ["{event.provider}", "{event.model}"],
+    "input": "{event.input|json}",
+    "output": "{event.output|json}",
+    "metadata": {
+      "usage": "{event.usage|json}",
+      "durationMs": "{event.durationMs}",
+      "finishReason": "{event.finishReason}"
+    }
+  }]
+}
+```
+
+POST it to the automations engine:
+
+```bash
+curl -X POST .../automations/routines.upsert \
+  -H "Content-Type: application/json" \
+  -d @auto-trace-llm.json
+```
+
+From that point on, every chat call from any registered LLM gateway
+flows into Langfuse as a trace. Failures land via `llm:call-failed`
+with `level: ERROR` if you also wire that.
+
+This is what the user meant by "OpenRouter is just another tool that
+can connect to Langfuse." OpenRouter is one provider; the contract
+is the event shape, not the plugin coupling.
 
 ## Why no SDK?
 

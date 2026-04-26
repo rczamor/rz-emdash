@@ -20,6 +20,7 @@
  */
 
 import type { PluginContext } from "emdash";
+import { dispatchEvent } from "@emdash-cms/plugin-automations/dispatch";
 
 import {
 	chatCompletion,
@@ -38,6 +39,8 @@ export interface RunChatLoopInput {
 	maxIterations?: number;
 	/** Task to attribute costs and tool calls to. */
 	taskId?: string;
+	/** Agent that initiated the run — emitted in llm:* events for tracers. */
+	agentId?: string;
 	/** Base URL for tools.invoke and tasks.cost.record. Defaults to ctx.site.url. */
 	siteUrl?: string;
 }
@@ -147,6 +150,20 @@ async function invokeOneTool(
 	return inv;
 }
 
+/**
+ * Best-effort dispatch into the Automations engine. Failure to dispatch
+ * never blocks the chat loop — the tracer is observability, not a
+ * critical path.
+ */
+function dispatch(source: string, payload: Record<string, unknown>, ctx: PluginContext): Promise<void> {
+	return dispatchEvent(source, payload, ctx).catch((err) => {
+		ctx.log.warn("OpenRouter: llm event dispatch failed", {
+			source,
+			error: err instanceof Error ? err.message : String(err),
+		});
+	});
+}
+
 function toolResultMessage(inv: ToolInvocation): ChatMessage {
 	const content = inv.error
 		? JSON.stringify({ ok: false, error: inv.error })
@@ -171,6 +188,20 @@ export async function runChatLoop(
 	let final: ChatMessage = { role: "assistant", content: "" };
 
 	for (let i = 0; i < maxIterations; i++) {
+		const callStart = Date.now();
+		// Provider-agnostic event so tracers (Langfuse, Helicone, etc.) can
+		// subscribe via routine without coupling back to OpenRouter.
+		void dispatch("llm:call-started", {
+			provider: "openrouter",
+			model: input.completionInput.model,
+			messages: history,
+			tools: input.completionInput.tools,
+			taskId: input.taskId,
+			agentId: input.agentId,
+			iteration: i,
+			startedAt: new Date(callStart).toISOString(),
+		}, ctx);
+
 		let response: ChatCompletionResponse;
 		try {
 			response = await chatCompletion(
@@ -178,10 +209,20 @@ export async function runChatLoop(
 				input.config,
 			);
 		} catch (err) {
+			const errMsg = err instanceof Error ? err.message : String(err);
 			ctx.log.error("OpenRouter: chat completion failed", {
 				iteration: i,
-				error: err instanceof Error ? err.message : String(err),
+				error: errMsg,
 			});
+			void dispatch("llm:call-failed", {
+				provider: "openrouter",
+				model: input.completionInput.model,
+				taskId: input.taskId,
+				agentId: input.agentId,
+				iteration: i,
+				error: errMsg,
+				durationMs: Date.now() - callStart,
+			}, ctx);
 			terminated = "error";
 			break;
 		}
@@ -201,6 +242,29 @@ export async function runChatLoop(
 				);
 			}
 		}
+
+		// Always emit llm:call-finished so any tracer can capture the full
+		// request/response/usage trio. Payload shape is provider-agnostic
+		// — Langfuse routines use this directly, LiteLLM-based gateways
+		// would emit the same event.
+		void dispatch("llm:call-finished", {
+			provider: "openrouter",
+			model: input.completionInput.model,
+			input: history,
+			output: response.choices[0]?.message,
+			usage: response.usage
+				? {
+						input: response.usage.prompt_tokens,
+						output: response.usage.completion_tokens,
+						total: response.usage.total_tokens,
+					}
+				: undefined,
+			taskId: input.taskId,
+			agentId: input.agentId,
+			iteration: i,
+			durationMs: Date.now() - callStart,
+			finishReason: response.choices[0]?.finish_reason,
+		}, ctx);
 
 		const message = response.choices[0]?.message;
 		if (!message) {

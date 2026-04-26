@@ -26,7 +26,8 @@
 		"emdash": "workspace:>=0.7.0"
 	},
 	"dependencies": {
-		"pg": "^8.0.0"
+		"pg": "^8.0.0",
+		"@emdash-cms/plugin-tools": "workspace:*"
 	},
 	"devDependencies": {},
 	"optionalDependencies": {}

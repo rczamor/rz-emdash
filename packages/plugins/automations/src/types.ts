@@ -26,7 +26,12 @@ export type EventTriggerName =
 	| "task:commented"
 	| "task:cost-recorded"
 	| "task:reviewed"
-	| "task:completed";
+	| "task:completed"
+	// LLM gateway lifecycle (provider-agnostic — OpenRouter, LiteLLM, etc.
+	// emit these so observability/eval plugins like Langfuse can subscribe)
+	| "llm:call-started"
+	| "llm:call-finished"
+	| "llm:call-failed";
 
 export interface EventTrigger {
 	on: EventTriggerName;
