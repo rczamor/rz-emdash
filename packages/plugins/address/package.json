@@ -1,0 +1,31 @@
+{
+	"name": "@emdash-cms/plugin-address",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Country-aware address handling for EmDash. Ten countries shipped, format/validate/parse utilities, webform-compatible field generators. EmDash port of Drupal's Address module.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./util": "./src/util.ts",
+		"./countries": "./src/countries.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"address",
+		"i18n"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}

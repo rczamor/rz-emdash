@@ -1,0 +1,32 @@
+{
+	"name": "@emdash-cms/plugin-pathauto",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Generate URL slugs from token patterns. EmDash port of Drupal's Pathauto module.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"pathauto",
+		"urls",
+		"slugs"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {
+		"@emdash-cms/plugin-tokens": "workspace:*"
+	},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}

@@ -37,10 +37,19 @@ export function webformPlugin(): PluginDescriptor {
 		format: "standard",
 		entrypoint: "@emdash-cms/plugin-webform/sandbox",
 		options: {},
-		capabilities: ["email:send"],
+		capabilities: ["email:send", "read:media", "write:media"],
 		storage: {
 			forms: { indexes: ["enabled", "createdAt"] },
-			submissions: { indexes: ["formId", "status", "createdAt", ["formId", "createdAt"]] },
+			submissions: {
+				indexes: [
+					"formId",
+					"status",
+					"createdAt",
+					["formId", "createdAt"],
+					["formId", "status"],
+					["formId", "ip"],
+				],
+			},
 		},
 		adminPages: [{ path: "/forms", label: "Webforms", icon: "list" }],
 		adminWidgets: [{ id: "webform-recent", title: "Recent submissions", size: "half" }],

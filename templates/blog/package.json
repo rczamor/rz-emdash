@@ -18,8 +18,11 @@
   "dependencies": {
     "@astrojs/node": "catalog:",
     "@astrojs/react": "catalog:",
+    "@emdash-cms/plugin-address": "workspace:*",
     "@emdash-cms/plugin-audit-log": "workspace:*",
+    "@emdash-cms/plugin-pathauto": "workspace:*",
     "@emdash-cms/plugin-resend": "workspace:*",
+    "@emdash-cms/plugin-rules": "workspace:*",
     "@emdash-cms/plugin-tokens": "workspace:*",
     "@emdash-cms/plugin-webform": "workspace:*",
     "astro": "catalog:",
