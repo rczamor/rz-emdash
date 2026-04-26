@@ -10,8 +10,18 @@
 
 export interface ChatMessage {
 	role: "system" | "user" | "assistant" | "tool";
-	content: string;
+	content: string | null;
 	name?: string;
+	/** Set on assistant messages when the model wants to call tools. */
+	tool_calls?: ChatToolCall[];
+	/** Set on `role: "tool"` messages — references the tool_call this is answering. */
+	tool_call_id?: string;
+}
+
+export interface ChatToolCall {
+	id: string;
+	type: "function";
+	function: { name: string; arguments: string };
 }
 
 export interface ChatCompletionInput {
@@ -25,6 +35,13 @@ export interface ChatCompletionInput {
 	stream?: false;
 	/** Pass-through pricing/routing constraints — see OpenRouter docs */
 	provider?: Record<string, unknown>;
+	/** OpenAI-compatible tool catalog (returned by the Tools plugin's openaiSpec). */
+	tools?: Array<{
+		type: "function";
+		function: { name: string; description: string; parameters: Record<string, unknown> };
+	}>;
+	/** "auto" (default), "none", or { type: "function", function: { name } } */
+	tool_choice?: "auto" | "none" | { type: "function"; function: { name: string } };
 }
 
 export interface ChatCompletionResponse {

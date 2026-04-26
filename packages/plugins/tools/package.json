@@ -1,0 +1,32 @@
+{
+	"name": "@emdash-cms/plugin-tools",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Tool registry for in-process LLM tool calling. Ships built-in tools wrapping ctx.content / Tasks / Agents memory; plugins can register additional tools at module-load time. Per-agent allowlist applied by OpenRouter when running tool-call loops.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./registry": "./src/registry.ts",
+		"./client": "./src/client.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"tools",
+		"function-calling",
+		"agentic"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}

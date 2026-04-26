@@ -1,0 +1,30 @@
+{
+	"name": "@emdash-cms/plugin-agents",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Agent registry for EmDash. Identity files (OpenClaw-style IDENTITY.md / SOUL.md / TOOLS.md split), per-agent skills allowlist (references content collection), per-agent tools allowlist, memory partitioned by agent id, model preferences, quota overrides.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./client": "./src/client.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"agents",
+		"agentic"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}

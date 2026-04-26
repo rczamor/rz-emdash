@@ -1,14 +1,16 @@
 import node from "@astrojs/node";
 import react from "@astrojs/react";
 import { addressPlugin } from "@emdash-cms/plugin-address";
+import { agentsPlugin } from "@emdash-cms/plugin-agents";
 import { auditLogPlugin } from "@emdash-cms/plugin-audit-log";
-import { pathautoPlugin } from "@emdash-cms/plugin-pathauto";
-import { resendPlugin } from "@emdash-cms/plugin-resend";
 import { automationsPlugin } from "@emdash-cms/plugin-automations";
 import { openrouterPlugin } from "@emdash-cms/plugin-openrouter";
+import { pathautoPlugin } from "@emdash-cms/plugin-pathauto";
+import { resendPlugin } from "@emdash-cms/plugin-resend";
 import { schedulerPlugin } from "@emdash-cms/plugin-scheduler";
 import { tasksPlugin } from "@emdash-cms/plugin-tasks";
 import { tokensPlugin } from "@emdash-cms/plugin-tokens";
+import { toolsPlugin } from "@emdash-cms/plugin-tools";
 import { webformPlugin } from "@emdash-cms/plugin-webform";
 import { defineConfig, fontProviders } from "astro/config";
 import emdash, { local } from "emdash/astro";
@@ -47,6 +49,8 @@ export default defineConfig({
 				addressPlugin(),
 				automationsPlugin(),
 				tasksPlugin(),
+				agentsPlugin(),
+				toolsPlugin(),
 				schedulerPlugin(),
 				openrouterPlugin(),
 			],

@@ -1255,6 +1255,12 @@ importers:
         specifier: workspace:>=0.7.0
         version: link:../../core
 
+  packages/plugins/agents:
+    dependencies:
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
+
   packages/plugins/ai-moderation:
     dependencies:
       '@cloudflare/kumo':
@@ -1394,12 +1400,21 @@ importers:
 
   packages/plugins/openrouter:
     dependencies:
+      '@emdash-cms/plugin-agents':
+        specifier: workspace:*
+        version: link:../agents
       '@emdash-cms/plugin-automations':
         specifier: workspace:*
         version: link:../automations
+      '@emdash-cms/plugin-tasks':
+        specifier: workspace:*
+        version: link:../tasks
       '@emdash-cms/plugin-tokens':
         specifier: workspace:*
         version: link:../tokens
+      '@emdash-cms/plugin-tools':
+        specifier: workspace:*
+        version: link:../tools
       emdash:
         specifier: workspace:>=0.7.0
         version: link:../../core
@@ -1448,6 +1463,12 @@ importers:
         version: link:../../core
 
   packages/plugins/tokens:
+    dependencies:
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
+
+  packages/plugins/tools:
     dependencies:
       emdash:
         specifier: workspace:>=0.7.0
@@ -1546,6 +1567,9 @@ importers:
       '@emdash-cms/plugin-address':
         specifier: workspace:*
         version: link:../../packages/plugins/address
+      '@emdash-cms/plugin-agents':
+        specifier: workspace:*
+        version: link:../../packages/plugins/agents
       '@emdash-cms/plugin-audit-log':
         specifier: workspace:*
         version: link:../../packages/plugins/audit-log
@@ -1570,6 +1594,9 @@ importers:
       '@emdash-cms/plugin-tokens':
         specifier: workspace:*
         version: link:../../packages/plugins/tokens
+      '@emdash-cms/plugin-tools':
+        specifier: workspace:*
+        version: link:../../packages/plugins/tools
       '@emdash-cms/plugin-webform':
         specifier: workspace:*
         version: link:../../packages/plugins/webform
