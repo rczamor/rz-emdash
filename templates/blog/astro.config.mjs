@@ -7,7 +7,7 @@ import { automationsPlugin } from "@emdash-cms/plugin-automations";
 import { brandPlugin } from "@emdash-cms/plugin-brand";
 import { designSystemPlugin } from "@emdash-cms/plugin-design-system";
 import { langfusePlugin } from "@emdash-cms/plugin-langfuse";
-import { openrouterPlugin } from "@emdash-cms/plugin-openrouter";
+import { llmRouterPlugin } from "@emdash-cms/plugin-llm-router";
 import { pathautoPlugin } from "@emdash-cms/plugin-pathauto";
 import { pgvectorPlugin } from "@emdash-cms/plugin-pgvector";
 import { resendPlugin } from "@emdash-cms/plugin-resend";
@@ -59,7 +59,7 @@ export default defineConfig({
 				designSystemPlugin(),
 				pgvectorPlugin(),
 				schedulerPlugin(),
-				openrouterPlugin(),
+				llmRouterPlugin(),
 				langfusePlugin(),
 			],
 		}),

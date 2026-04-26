@@ -1,0 +1,39 @@
+{
+	"name": "@emdash-cms/plugin-llm-router",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Unified LLM gateway plugin with driver registry. Built-in drivers: OpenRouter, TensorZero, LiteLLM. Single chat-loop with provider-agnostic llm:* event emission, single set of llm:* automation actions, single admin page. Add more drivers without touching consumers.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./client": "./src/client.ts",
+		"./driver": "./src/driver.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"llm",
+		"openrouter",
+		"tensorzero",
+		"litellm"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {
+		"@emdash-cms/plugin-agents": "workspace:*",
+		"@emdash-cms/plugin-automations": "workspace:*",
+		"@emdash-cms/plugin-tasks": "workspace:*",
+		"@emdash-cms/plugin-tokens": "workspace:*",
+		"@emdash-cms/plugin-tools": "workspace:*"
+	},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}

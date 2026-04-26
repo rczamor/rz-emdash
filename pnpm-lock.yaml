@@ -1412,6 +1412,27 @@ importers:
         specifier: workspace:>=0.7.0
         version: link:../../core
 
+  packages/plugins/llm-router:
+    dependencies:
+      '@emdash-cms/plugin-agents':
+        specifier: workspace:*
+        version: link:../agents
+      '@emdash-cms/plugin-automations':
+        specifier: workspace:*
+        version: link:../automations
+      '@emdash-cms/plugin-tasks':
+        specifier: workspace:*
+        version: link:../tasks
+      '@emdash-cms/plugin-tokens':
+        specifier: workspace:*
+        version: link:../tokens
+      '@emdash-cms/plugin-tools':
+        specifier: workspace:*
+        version: link:../tools
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
+
   packages/plugins/marketplace-test:
     dependencies:
       emdash:
@@ -1624,9 +1645,9 @@ importers:
       '@emdash-cms/plugin-langfuse':
         specifier: workspace:*
         version: link:../../packages/plugins/langfuse
-      '@emdash-cms/plugin-openrouter':
+      '@emdash-cms/plugin-llm-router':
         specifier: workspace:*
-        version: link:../../packages/plugins/openrouter
+        version: link:../../packages/plugins/llm-router
       '@emdash-cms/plugin-pathauto':
         specifier: workspace:*
         version: link:../../packages/plugins/pathauto

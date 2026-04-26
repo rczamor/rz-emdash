@@ -6,7 +6,7 @@
  *   POST  upsert                Insert / replace embedding for (collection, id, model)
  *   POST  upsert.bulk           Bulk variant — { inputs: [...] }
  *   POST  search                k-NN search by raw embedding (+ metadata filter)
- *   POST  search.byText         Embed text via openrouter, then search
+ *   POST  search.byText         Embed text via the configured LLM gateway, then search
  *   POST  delete                Delete by (collection, id) [+ optional model + optional dimension]
  *   GET   list?source_collection=&limit=
  *   GET   stats                 Total + per-collection + per-dimension counts
@@ -58,35 +58,55 @@ function siteUrl(ctx: PluginContext): string {
 	return (((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321") as string).replace(/\/$/, "");
 }
 
-async function embedTextViaOpenRouter(
+/**
+ * Resolve the route to use for `embeddings` calls. Defaults try, in
+ * order: PGVECTOR_EMBED_ROUTE (env var override), the registered
+ * tensorzero plugin, the registered openrouter plugin. Decouples
+ * pgvector from any one LLM gateway — anything that exposes
+ * `POST .../embeddings` returning `{ data: { ok, response: { data:
+ * [{ embedding }], model } } }` works.
+ */
+function embedRoutes(): string[] {
+	const override = process.env.PGVECTOR_EMBED_ROUTE;
+	if (override) return [override.startsWith("/") ? override : `/${override}`];
+	return [
+		"/_emdash/api/plugins/tensorzero/embeddings",
+		"/_emdash/api/plugins/openrouter/embeddings",
+	];
+}
+
+async function embedTextViaGateway(
 	text: string,
 	model: string | undefined,
 	ctx: PluginContext,
 ): Promise<{ embedding: number[]; model: string } | null> {
 	if (!ctx.http) return null;
-	try {
-		const res = await ctx.http.fetch(
-			`${siteUrl(ctx)}/_emdash/api/plugins/openrouter/embeddings`,
-			{
+	for (const path of embedRoutes()) {
+		try {
+			const res = await ctx.http.fetch(`${siteUrl(ctx)}${path}`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ input: text, model }),
-			},
-		);
-		if (!res.ok) return null;
-		const json = (await res.json()) as {
-			data?: { ok?: boolean; response?: { data?: Array<{ embedding: number[] }>; model: string } };
-		};
-		const data = json.data?.response;
-		const embedding = data?.data?.[0]?.embedding;
-		if (!embedding) return null;
-		return { embedding, model: data!.model };
-	} catch (err) {
-		ctx.log.warn("pgvector: openrouter embed failed", {
-			error: err instanceof Error ? err.message : String(err),
-		});
-		return null;
+			});
+			if (!res.ok) continue;
+			const json = (await res.json()) as {
+				data?: {
+					ok?: boolean;
+					response?: { data?: Array<{ embedding: number[] }>; model: string };
+				};
+			};
+			const data = json.data?.response;
+			const embedding = data?.data?.[0]?.embedding;
+			if (!embedding) continue;
+			return { embedding, model: data!.model };
+		} catch (err) {
+			ctx.log.warn("pgvector: gateway embed attempt failed", {
+				path,
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
 	}
+	return null;
 }
 
 // ── Auto-embed config ──────────────────────────────────────────────────────
@@ -143,7 +163,7 @@ registerTool({
 	parameters: {
 		type: "object",
 		properties: {
-			text: { type: "string", description: "Query text — auto-embedded via openrouter" },
+			text: { type: "string", description: "Query text — auto-embedded via configured LLM gateway" },
 			embedding: {
 				type: "array",
 				items: { type: "number" },
@@ -167,8 +187,8 @@ registerTool({
 		if (Array.isArray(args.embedding)) {
 			embedding = args.embedding as number[];
 		} else if (typeof args.text === "string" && args.text) {
-			const embed = await embedTextViaOpenRouter(args.text, undefined, ctx);
-			if (!embed) throw new Error("Failed to embed query text via openrouter");
+			const embed = await embedTextViaGateway(args.text, undefined, ctx);
+			if (!embed) throw new Error("Failed to embed query text via configured LLM gateway");
 			embedding = embed.embedding;
 		} else {
 			throw new Error("vector_search needs either `text` or `embedding`");
@@ -327,7 +347,7 @@ export default definePlugin({
 					});
 					return;
 				}
-				const embed = await embedTextViaOpenRouter(text, config.model, ctx);
+				const embed = await embedTextViaGateway(text, config.model, ctx);
 				if (!embed) {
 					ctx.log.warn("pgvector: auto-embed openrouter call failed", { collection, sourceId });
 					return;
@@ -443,7 +463,7 @@ export default definePlugin({
 					  }
 					| null;
 				if (!body || !body.text) return { ok: false, error: "text required" };
-				const embed = await embedTextViaOpenRouter(body.text, body.model, ctx);
+				const embed = await embedTextViaGateway(body.text, body.model, ctx);
 				if (!embed) return { ok: false, error: "Failed to embed text via openrouter" };
 				try {
 					const results = await searchEmbeddings({
