@@ -34,6 +34,11 @@
 		"@emdash-cms/plugin-tokens": "workspace:*",
 		"@emdash-cms/plugin-tools": "workspace:*"
 	},
-	"devDependencies": {},
+	"scripts": {
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"vitest": "catalog:"
+	},
 	"optionalDependencies": {}
 }

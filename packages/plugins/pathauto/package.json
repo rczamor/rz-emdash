@@ -21,12 +21,17 @@
 		"slugs"
 	],
 	"license": "MIT",
+	"scripts": {
+		"test": "vitest run"
+	},
 	"peerDependencies": {
 		"emdash": "workspace:>=0.7.0"
 	},
 	"dependencies": {
 		"@emdash-cms/plugin-tokens": "workspace:*"
 	},
-	"devDependencies": {},
+	"devDependencies": {
+		"vitest": "catalog:"
+	},
 	"optionalDependencies": {}
 }
