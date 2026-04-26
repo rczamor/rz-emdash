@@ -1,5 +1,5 @@
 /**
- * Routine types for the Rules plugin.
+ * Routine types for the Automations plugin.
  *
  * A routine is { trigger, optional filter, one-or-more actions }. Stored
  * as JSON in plugin storage. Loaded into the engine on plugin:activate

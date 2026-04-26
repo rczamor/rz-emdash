@@ -1,4 +1,4 @@
-# @emdash-cms/plugin-rules
+# @emdash-cms/plugin-automations
 
 EmDash port of Drupal's Rules module — reframed as Claude-Code-routine-style
 YAML/JSON specs. Triggers, filters, actions. Event-driven and cron-driven.
@@ -8,12 +8,12 @@ YAML/JSON specs. Triggers, filters, actions. Event-driven and cron-driven.
 ```ts
 // astro.config.mjs
 import { tokensPlugin } from "@emdash-cms/plugin-tokens";
-import { rulesPlugin } from "@emdash-cms/plugin-rules";
+import { automationsPlugin } from "@emdash-cms/plugin-automations";
 
 export default defineConfig({
   integrations: [
     emdash({
-      plugins: [tokensPlugin(), rulesPlugin()],
+      plugins: [tokensPlugin(), automationsPlugin()],
     }),
   ],
 });
@@ -157,11 +157,11 @@ Inside any string field of an action, you can reference:
 ## Manage via the API
 
 ```
-GET   /_emdash/api/plugins/rules/routines.list
-GET   /_emdash/api/plugins/rules/routines.get?id=<id>
-POST  /_emdash/api/plugins/rules/routines.upsert     body: <Routine>
-POST  /_emdash/api/plugins/rules/routines.delete     body: { id }
-POST  /_emdash/api/plugins/rules/routines.test       body: { id, event? }
+GET   /_emdash/api/plugins/automations/routines.list
+GET   /_emdash/api/plugins/automations/routines.get?id=<id>
+POST  /_emdash/api/plugins/automations/routines.upsert     body: <Routine>
+POST  /_emdash/api/plugins/automations/routines.delete     body: { id }
+POST  /_emdash/api/plugins/automations/routines.test       body: { id, event? }
 ```
 
 `routines.test` runs a routine immediately against a synthetic event
@@ -233,7 +233,7 @@ with email / webhook / log / kv:set only. Extend by forking the plugin's
 
 ## Custom action types (pluggable registry)
 
-The action registry is exported at `@emdash-cms/plugin-rules/registry`.
+The action registry is exported at `@emdash-cms/plugin-automations/registry`.
 Register your own action type at module-load time:
 
 ```ts
@@ -241,8 +241,8 @@ Register your own action type at module-load time:
 // from there). Must run before the rules plugin handles its first
 // routine — registering at module-load time satisfies that.
 
-import { registerAction } from "@emdash-cms/plugin-rules/registry";
-import type { Action } from "@emdash-cms/plugin-rules";
+import { registerAction } from "@emdash-cms/plugin-automations/registry";
+import type { Action } from "@emdash-cms/plugin-automations";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
 
 interface SlackAction extends Action {
@@ -273,7 +273,7 @@ cross-isolate plugin API, custom actions only work in trusted mode.
 
 ## Admin UI
 
-A Block Kit page at **Settings → Rules** lists every routine. Per-row
+A Block Kit page at **Settings → Automations** lists every routine. Per-row
 actions:
 
 - **Enable / Disable** — flips `enabled`. For cron routines this also

@@ -1,7 +1,7 @@
 /**
  * Built-in action runners. Each is registered in the pluggable
  * registry at module load. Other plugins or user code can register
- * additional action types via `@emdash-cms/plugin-rules/registry`.
+ * additional action types via `@emdash-cms/plugin-automations/registry`.
  */
 
 import type { PluginContext } from "emdash";

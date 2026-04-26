@@ -4,7 +4,7 @@ import { addressPlugin } from "@emdash-cms/plugin-address";
 import { auditLogPlugin } from "@emdash-cms/plugin-audit-log";
 import { pathautoPlugin } from "@emdash-cms/plugin-pathauto";
 import { resendPlugin } from "@emdash-cms/plugin-resend";
-import { rulesPlugin } from "@emdash-cms/plugin-rules";
+import { automationsPlugin } from "@emdash-cms/plugin-automations";
 import { tokensPlugin } from "@emdash-cms/plugin-tokens";
 import { webformPlugin } from "@emdash-cms/plugin-webform";
 import { defineConfig, fontProviders } from "astro/config";
@@ -42,7 +42,7 @@ export default defineConfig({
 				webformPlugin(),
 				pathautoPlugin(),
 				addressPlugin(),
-				rulesPlugin(),
+				automationsPlugin(),
 			],
 		}),
 	],

@@ -50,7 +50,7 @@ export async function executeRoutine(
 			await runAction(action, tokenCtx, ctx);
 		} catch (err) {
 			lastError = err instanceof Error ? err.message : String(err);
-			ctx.log.error("Rules: action failed", {
+			ctx.log.error("Automations: action failed", {
 				routineId: routine.id,
 				actionType: action.type,
 				error: lastError,
@@ -87,7 +87,7 @@ export async function dispatchEvent(
 		try {
 			await executeRoutine(r, event, siteName, ctx);
 		} catch (err) {
-			ctx.log.error("Rules: routine threw", {
+			ctx.log.error("Automations: routine threw", {
 				routineId: r.id,
 				error: err instanceof Error ? err.message : String(err),
 			});

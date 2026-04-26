@@ -1,8 +1,9 @@
 /**
- * Rules Plugin for EmDash CMS
+ * Automations Plugin for EmDash CMS
  *
  * EmDash port of Drupal's Rules module — reframed as Claude-Code-routine-style
- * YAML/JSON specs. A routine is a JSON document with three parts:
+ * YAML/JSON specs. An automation (or "routine") is a JSON document with
+ * three parts:
  *
  *   - trigger:  what fires it (an emdash hook event, or a cron schedule)
  *   - filter:   structured DSL to limit when the routine runs (optional)
@@ -33,8 +34,8 @@
  * Token strings inside actions go through `@emdash-cms/plugin-tokens`. The
  * full event is bound to `{event.…}` and site metadata to `{site.…}`.
  *
- * Built-in actions: email, webhook, log, kv:set. More can be added by
- * forking this plugin (a runtime registry is on the roadmap).
+ * Built-in actions: email, webhook, log, kv:set. Custom action types are
+ * registered via `@emdash-cms/plugin-automations/registry`.
  */
 
 import type { PluginDescriptor } from "emdash";
@@ -52,12 +53,12 @@ export type {
 	WebhookAction,
 } from "./types.js";
 
-export function rulesPlugin(): PluginDescriptor {
+export function automationsPlugin(): PluginDescriptor {
 	return {
-		id: "rules",
+		id: "automations",
 		version: "0.0.1",
 		format: "standard",
-		entrypoint: "@emdash-cms/plugin-rules/sandbox",
+		entrypoint: "@emdash-cms/plugin-automations/sandbox",
 		options: {},
 		capabilities: [
 			"email:send",
@@ -76,7 +77,7 @@ export function rulesPlugin(): PluginDescriptor {
 		storage: {
 			routines: { indexes: ["enabled", "triggerOn", "createdAt"] },
 		},
-		adminPages: [{ path: "/rules", label: "Rules", icon: "git-branch" }],
-		adminWidgets: [{ id: "rules-recent", title: "Recent rule runs", size: "half" }],
+		adminPages: [{ path: "/automations", label: "Automations", icon: "git-branch" }],
+		adminWidgets: [{ id: "automations-recent", title: "Recent automation runs", size: "half" }],
 	};
 }

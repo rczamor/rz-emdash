@@ -1,8 +1,8 @@
 {
-	"name": "@emdash-cms/plugin-rules",
+	"name": "@emdash-cms/plugin-automations",
 	"private": true,
 	"version": "0.0.1",
-	"description": "Event- and cron-driven automation for EmDash. EmDash port of Drupal's Rules module, reframed as Claude-Code-routine-style YAML/JSON specs.",
+	"description": "Event- and cron-driven automations for EmDash. EmDash port of Drupal's Rules module, reframed as Claude-Code-routine-style YAML/JSON specs.",
 	"type": "module",
 	"main": "src/index.ts",
 	"exports": {
@@ -17,9 +17,10 @@
 		"emdash",
 		"cms",
 		"plugin",
-		"rules",
+		"automations",
 		"automation",
-		"routines"
+		"routines",
+		"rules"
 	],
 	"license": "MIT",
 	"peerDependencies": {

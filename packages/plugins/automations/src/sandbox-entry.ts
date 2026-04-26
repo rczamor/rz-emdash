@@ -1,5 +1,5 @@
 /**
- * Rules — runtime entrypoint.
+ * Automations — runtime entrypoint.
  *
  * Wires every relevant emdash hook to the engine, plus cron. Each hook
  * handler delegates to `dispatchEvent(<source>, <event>, ctx)`, which
@@ -52,7 +52,7 @@ async function buildAdminPage(ctx: PluginContext) {
 	const routines = result.items.map((i) => i.data as Routine);
 
 	const blocks: unknown[] = [
-		{ type: "header", text: "Rules" },
+		{ type: "header", text: "Automations" },
 		{
 			type: "context",
 			elements: [
@@ -69,12 +69,12 @@ async function buildAdminPage(ctx: PluginContext) {
 			type: "banner",
 			variant: "default",
 			title: "No routines yet",
-			description: "Ask an agent to create one via /_emdash/api/plugins/rules/routines.upsert.",
+			description: "Ask an agent to create one via /_emdash/api/plugins/automations/routines.upsert.",
 		});
 	} else {
 		blocks.push({
 			type: "table",
-			blockId: "rules-list",
+			blockId: "automations-list",
 			columns: [
 				{ key: "id", label: "ID", format: "text" },
 				{ key: "name", label: "Name", format: "text" },
@@ -137,10 +137,10 @@ async function buildRecentWidget(ctx: PluginContext) {
 		.slice(0, 5);
 	return {
 		blocks: [
-			{ type: "header", text: "Recent rule runs" },
+			{ type: "header", text: "Recent automation runs" },
 			{
 				type: "table",
-				blockId: "rules-recent",
+				blockId: "automations-recent",
 				columns: [
 					{ key: "name", label: "Routine", format: "text" },
 					{ key: "lastRunAt", label: "When", format: "relative_time" },
@@ -162,7 +162,7 @@ export default definePlugin({
 	hooks: {
 		"plugin:install": {
 			handler: async (_event, ctx: PluginContext) => {
-				ctx.log.info("Rules plugin installed");
+				ctx.log.info("Automations plugin installed");
 			},
 		},
 		"plugin:activate": {
@@ -369,10 +369,10 @@ export default definePlugin({
 					value?: string;
 				};
 
-				if (interaction.type === "page_load" && interaction.page === "/rules") {
+				if (interaction.type === "page_load" && interaction.page === "/automations") {
 					return await buildAdminPage(ctx);
 				}
-				if (interaction.type === "widget_load" && interaction.widget === "rules-recent") {
+				if (interaction.type === "widget_load" && interaction.widget === "automations-recent") {
 					return await buildRecentWidget(ctx);
 				}
 

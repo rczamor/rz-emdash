@@ -3,8 +3,8 @@
  *
  * Custom action types are registered here at module-load time. Other
  * plugins (or user code in `astro.config.mjs`) import this module and
- * call `registerAction(...)` once. The Rules engine looks up actions
- * via `getAction()` at execution time.
+ * call `registerAction(...)` once. The Automations engine looks up
+ * actions via `getAction()` at execution time.
  *
  * Constraint: the registry is a module-scoped singleton. It works
  * across all plugins running in the same process (the trusted-mode
@@ -13,8 +13,8 @@
  * own (empty-by-default) registry. Until emdash exposes a runtime
  * cross-isolate plugin API, custom actions only work in trusted mode.
  *
- * Built-in actions are auto-registered when the Rules plugin's runtime
- * entrypoint loads.
+ * Built-in actions are auto-registered when the Automations plugin's
+ * runtime entrypoint loads.
  */
 
 import type { PluginContext } from "emdash";
@@ -33,7 +33,7 @@ export function registerAction<A extends Action>(type: A["type"], runner: Action
 	if (registry.has(type)) {
 		// Last writer wins. A console warn is enough; this is a dev-time
 		// configuration concern, not a runtime error.
-		console.warn(`[rules] action type "${type}" was already registered — overwriting.`);
+		console.warn(`[automations] action type "${type}" was already registered — overwriting.`);
 	}
 	registry.set(type, runner as ActionRunner);
 }
