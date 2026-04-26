@@ -20,6 +20,7 @@ import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
 
+import { handleAdminInteraction } from "./form-builder.js";
 import type {
 	FieldDef,
 	FieldType,
@@ -405,109 +406,6 @@ interface RouteCtx {
 	requestMeta?: { ip?: string; userAgent?: string };
 }
 
-// ── Block Kit views ─────────────────────────────────────────────────────────
-
-async function buildFormsListPage(ctx: PluginContext) {
-	const result = await ctx.storage.forms.query({
-		orderBy: { createdAt: "desc" },
-		limit: 200,
-	});
-	return {
-		blocks: [
-			{ type: "header", text: "Webforms" },
-			{
-				type: "context",
-				elements: [
-					{
-						type: "text",
-						text: "Forms are managed via the API. POST to forms.upsert with a JSON definition.",
-					},
-				],
-			},
-			{
-				type: "table",
-				blockId: "webform-forms",
-				columns: [
-					{ key: "id", label: "ID", format: "text" },
-					{ key: "title", label: "Title", format: "text" },
-					{ key: "fields", label: "Fields", format: "text" },
-					{ key: "steps", label: "Steps", format: "text" },
-					{ key: "enabled", label: "Status", format: "badge" },
-					{ key: "createdAt", label: "Created", format: "relative_time" },
-				],
-				rows: result.items.map((item) => {
-					const f = item.data as FormDefinition;
-					return {
-						id: f.id,
-						title: f.title,
-						fields: String(f.fields.length),
-						steps: f.steps?.length ? String(f.steps.length) : "—",
-						enabled: f.enabled ? "Enabled" : "Disabled",
-						createdAt: f.createdAt,
-					};
-				}),
-			},
-		],
-	};
-}
-
-async function buildSubmissionsTable(formId: string, ctx: PluginContext) {
-	const result = await ctx.storage.submissions.query({
-		filter: { formId },
-		orderBy: { createdAt: "desc" },
-		limit: 100,
-	});
-	return {
-		blocks: [
-			{ type: "header", text: `Submissions — ${formId}` },
-			{
-				type: "table",
-				blockId: "webform-submissions",
-				columns: [
-					{ key: "id", label: "ID", format: "text" },
-					{ key: "status", label: "Status", format: "badge" },
-					{ key: "ip", label: "IP", format: "text" },
-					{ key: "createdAt", label: "Submitted", format: "relative_time" },
-				],
-				rows: result.items.map((item) => {
-					const s = item.data as SubmissionRecord;
-					return {
-						id: item.id,
-						status: s.status,
-						ip: s.ip ?? "",
-						createdAt: s.createdAt,
-					};
-				}),
-			},
-		],
-	};
-}
-
-async function buildRecentWidget(ctx: PluginContext) {
-	const result = await ctx.storage.submissions.query({
-		orderBy: { createdAt: "desc" },
-		limit: 5,
-	});
-	return {
-		blocks: [
-			{ type: "header", text: "Recent submissions" },
-			{
-				type: "table",
-				blockId: "webform-recent",
-				columns: [
-					{ key: "formId", label: "Form", format: "text" },
-					{ key: "status", label: "Status", format: "badge" },
-					{ key: "createdAt", label: "When", format: "relative_time" },
-				],
-				rows: result.items.map((item) => {
-					const s = item.data as SubmissionRecord;
-					return { formId: s.formId, status: s.status, createdAt: s.createdAt };
-				}),
-			},
-		],
-	};
-}
-
 // ── Plugin definition ───────────────────────────────────────────────────────
 
 export default definePlugin({
@@ -851,29 +749,10 @@ export default definePlugin({
 		// ── Block Kit admin handler ────────────────────────────────────────
 		admin: {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const interaction = routeCtx.input as {
-					type?: string;
-					page?: string;
-					widget?: string;
-					values?: Record<string, unknown>;
-				};
-				if (interaction.type === "page_load" && interaction.page === "/forms") {
-					return await buildFormsListPage(ctx);
-				}
-				if (
-					interaction.type === "page_load" &&
-					typeof interaction.page === "string" &&
-					interaction.page.startsWith("/forms/")
-				) {
-					const formId = interaction.page.slice("/forms/".length).split("/")[0]!;
-					if (isValidFormId(formId)) {
-						return await buildSubmissionsTable(formId, ctx);
-					}
-				}
-				if (interaction.type === "widget_load" && interaction.widget === "webform-recent") {
-					return await buildRecentWidget(ctx);
-				}
-				return { blocks: [] };
+				return await handleAdminInteraction(
+					routeCtx.input as Parameters<typeof handleAdminInteraction>[0],
+					ctx,
+				);
 			},
 		},
 	},

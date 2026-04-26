@@ -102,6 +102,22 @@ The submission body can include any `data._hp` honeypot field; if non-empty
 the request is logged as spam and a fake-success response is returned to
 fool naïve bots.
 
+## Admin form builder
+
+Open **Settings → Webforms** in admin. The Block Kit form-builder UI
+lets you:
+
+- List all forms with edit / duplicate / delete buttons
+- Create a new form (id, title, description, enabled)
+- Edit form metadata, then add/edit/delete fields one at a time
+- Pick from any of the 18 supported field types via dropdown
+- Manage notification recipients with token-templated subject and body
+- Configure rate limits, total/per-IP submission limits, and the
+  confirmation message
+
+The API routes (forms.upsert etc.) remain available — the builder UI
+just calls the same code paths.
+
 ## Listing & exporting submissions
 
 Admin endpoints:

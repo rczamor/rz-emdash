@@ -2,12 +2,14 @@
  * Address — runtime entrypoint.
  *
  * Routes:
- *   GET   countries.list                     public — list available countries
- *   GET   countries.get?code=US              public — fetch country spec
- *   POST  validate                           public — validate an address payload
- *   POST  format                             public — format an address to a string
- *   POST  webformFields?country=US           admin  — generate webform fields snippet
- *   POST  admin                              Block Kit
+ *   GET   countries.list                   public
+ *   GET   countries.get?code=US            public
+ *   POST  validate                         public
+ *   POST  format                           public
+ *   POST  geocode                          admin (network-bound)
+ *   POST  reverseGeocode                   admin (network-bound)
+ *   GET   webformFields?country=US         admin
+ *   POST  admin                            Block Kit
  */
 
 import { definePlugin } from "emdash";
@@ -21,6 +23,7 @@ import {
 	webformFieldsForCountry,
 } from "./util.js";
 import { COUNTRIES } from "./countries.js";
+import { geocode, reverseGeocode } from "./geocoding.js";
 
 interface RouteCtx {
 	input: unknown;
@@ -31,17 +34,26 @@ function getQueryParam(routeCtx: RouteCtx, key: string): string | undefined {
 	return new URL(routeCtx.request.url).searchParams.get(key) ?? undefined;
 }
 
-async function buildAdminPage() {
+async function buildAdminPage(ctx: PluginContext) {
 	const list = listCountries();
+	const cacheCount = await ctx.storage.geocache.count({});
 	return {
 		blocks: [
-			{ type: "header", text: "Address — supported countries" },
+			{ type: "header", text: "Address" },
+			{
+				type: "stats",
+				stats: [
+					{ label: "Countries", value: String(list.length) },
+					{ label: "Geocode cache entries", value: String(cacheCount) },
+				],
+			},
+			{ type: "header", text: "Supported countries" },
 			{
 				type: "context",
 				elements: [
 					{
 						type: "text",
-						text: "Built-in country specs ship with the plugin. Plugins can register more at runtime via registerCountry().",
+						text: "Built-in country specs. Plugins can register more via registerCountry() at runtime.",
 					},
 				],
 			},
@@ -69,9 +81,7 @@ export default definePlugin({
 	routes: {
 		"countries.list": {
 			public: true,
-			handler: async () => {
-				return { countries: listCountries() };
-			},
+			handler: async () => ({ countries: listCountries() }),
 		},
 
 		"countries.get": {
@@ -88,7 +98,9 @@ export default definePlugin({
 		validate: {
 			public: true,
 			handler: async (routeCtx: RouteCtx) => {
-				const body = routeCtx.input as { country?: string; address?: Record<string, string> } | null;
+				const body = routeCtx.input as
+					| { country?: string; address?: Record<string, string> }
+					| null;
 				if (!body || !body.country || !body.address) {
 					return { ok: false, error: "country + address required" };
 				}
@@ -100,11 +112,58 @@ export default definePlugin({
 		format: {
 			public: true,
 			handler: async (routeCtx: RouteCtx) => {
-				const body = routeCtx.input as { country?: string; address?: Record<string, string> } | null;
+				const body = routeCtx.input as
+					| { country?: string; address?: Record<string, string> }
+					| null;
 				if (!body || !body.country || !body.address) {
 					return { ok: false, error: "country + address required" };
 				}
 				return { ok: true, formatted: formatAddress(body.address, body.country) };
+			},
+		},
+
+		geocode: {
+			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
+				const body = routeCtx.input as
+					| { address?: Record<string, string>; country?: string; bypassCache?: boolean }
+					| null;
+				if (!body || !body.address) {
+					return { ok: false, error: "address required" };
+				}
+				try {
+					const result = await geocode(
+						body.address,
+						{ country: body.country, bypassCache: body.bypassCache },
+						ctx,
+					);
+					if (!result) return { ok: false, error: "No match" };
+					return { ok: true, result };
+				} catch (err) {
+					return { ok: false, error: err instanceof Error ? err.message : String(err) };
+				}
+			},
+		},
+
+		reverseGeocode: {
+			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
+				const body = routeCtx.input as
+					| { lat?: number; lng?: number; bypassCache?: boolean }
+					| null;
+				if (!body || typeof body.lat !== "number" || typeof body.lng !== "number") {
+					return { ok: false, error: "lat + lng required" };
+				}
+				try {
+					const result = await reverseGeocode(
+						body.lat,
+						body.lng,
+						{ bypassCache: body.bypassCache },
+						ctx,
+					);
+					if (!result) return { ok: false, error: "No match" };
+					return { ok: true, result };
+				} catch (err) {
+					return { ok: false, error: err instanceof Error ? err.message : String(err) };
+				}
 			},
 		},
 
@@ -118,10 +177,10 @@ export default definePlugin({
 		},
 
 		admin: {
-			handler: async (routeCtx: RouteCtx, _ctx: PluginContext) => {
+			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const interaction = routeCtx.input as { type?: string; page?: string };
 				if (interaction.type === "page_load" && interaction.page === "/address") {
-					return await buildAdminPage();
+					return await buildAdminPage(ctx);
 				}
 				return { blocks: [] };
 			},
@@ -129,7 +188,4 @@ export default definePlugin({
 	},
 });
 
-// Re-export so consumers using `@emdash-cms/plugin-address/sandbox` can
-// reach the helpers without a separate import path. The util package is
-// the canonical path though.
 export { addressFromSubmission };

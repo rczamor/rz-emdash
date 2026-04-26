@@ -1,13 +1,13 @@
 /**
- * Built-in action runners.
- *
- * Each runner returns void on success or throws on failure. The engine
- * catches thrown errors and records them on the routine's stats.
+ * Built-in action runners. Each is registered in the pluggable
+ * registry at module load. Other plugins or user code can register
+ * additional action types via `@emdash-cms/plugin-rules/registry`.
  */
 
 import type { PluginContext } from "emdash";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
 
+import { _registerBuiltin, getAction } from "./registry.js";
 import type { Action, EmailAction, KvSetAction, LogAction, WebhookAction } from "./types.js";
 
 async function r(input: string, ctx: Record<string, unknown>): Promise<string> {
@@ -79,19 +79,21 @@ async function runKvSet(
 	await ctx.kv.set(key, value);
 }
 
+// Seed the registry on module load.
+_registerBuiltin<EmailAction>("email", runEmail);
+_registerBuiltin<WebhookAction>("webhook", runWebhook);
+_registerBuiltin<LogAction>("log", runLog);
+_registerBuiltin<KvSetAction>("kv:set", runKvSet);
+
+/**
+ * Run any registered action. Throws if the action type is unknown.
+ */
 export async function runAction(
 	action: Action,
 	tokenCtx: Record<string, unknown>,
 	ctx: PluginContext,
 ): Promise<void> {
-	switch (action.type) {
-		case "email":
-			return runEmail(action, tokenCtx, ctx);
-		case "webhook":
-			return runWebhook(action, tokenCtx, ctx);
-		case "log":
-			return runLog(action, tokenCtx, ctx);
-		case "kv:set":
-			return runKvSet(action, tokenCtx, ctx);
-	}
+	const runner = getAction(action.type);
+	if (!runner) throw new Error(`Unknown action type: ${action.type}`);
+	await runner(action, tokenCtx, ctx);
 }

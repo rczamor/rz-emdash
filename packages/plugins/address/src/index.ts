@@ -37,6 +37,13 @@ export function addressPlugin(): PluginDescriptor {
 		format: "standard",
 		entrypoint: "@emdash-cms/plugin-address/sandbox",
 		options: {},
+		capabilities: ["network:fetch"],
+		// Default: Nominatim (free, OSM-based). Add more hosts here if you
+		// configure a different provider (Mapbox, Google, etc.).
+		allowedHosts: ["nominatim.openstreetmap.org", "api.mapbox.com", "maps.googleapis.com"],
+		storage: {
+			geocache: { indexes: ["query", "createdAt"] },
+		},
 		adminPages: [{ path: "/address", label: "Address", icon: "map-pin" }],
 	};
 }

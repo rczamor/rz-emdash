@@ -130,11 +130,74 @@ Same reason as `@emdash-cms/plugin-tokens`: making it appear in
 `astro.config.mjs` and the marketplace listing keeps it discoverable.
 The descriptor itself has no hooks today.
 
+## Geocoding
+
+The plugin ships a Nominatim-backed geocoder. Free, OSM-based, rate-
+limited (1 req/s per IP per their usage policy — keep it polite). All
+calls go through `ctx.http.fetch` so the `network:fetch` capability
+gate applies, and results are cached in plugin storage for 30 days.
+
+```bash
+# Forward
+curl -X POST http://localhost:4321/_emdash/api/plugins/address/geocode \
+  -H "Content-Type: application/json" \
+  -d '{"country":"US","address":{"addressLine1":"1 Apple Park Way","locality":"Cupertino","administrativeArea":"CA","postalCode":"95014"}}'
+# → { "ok": true, "result": { "lat": 37.33, "lng": -122.01, "formatted": "...", "provider": "nominatim" } }
+
+# Reverse
+curl -X POST http://localhost:4321/_emdash/api/plugins/address/reverseGeocode \
+  -H "Content-Type: application/json" \
+  -d '{"lat": 37.33, "lng": -122.01}'
+# → { "ok": true, "result": { "formatted": "1 Apple Park Way, Cupertino, CA, USA", "address": {...} } }
+```
+
+To swap in another provider (Mapbox, Google), fork the plugin's
+[geocoding.ts](src/geocoding.ts) — the abstraction is intentionally
+small. Mapbox/Google hosts are pre-allowlisted in the descriptor
+([src/index.ts](src/index.ts)) so you only need to plug in their API
+shape and a key.
+
+## Composite address field for collections
+
+EmDash collections have a built-in `json` field type. The address
+plugin exports helpers for using it as a composite address:
+
+```ts
+// In your seed.json, splice the result of addressFieldSeed() into a collection's fields:
+import { addressFieldSeed } from "@emdash-cms/plugin-address/composite";
+
+addressFieldSeed({ slug: "shipping", label: "Shipping address", required: true });
+// → { slug: "shipping", label: "Shipping address", type: "json",
+//     required: true, helpText: "Composite address. Stored as JSON: …" }
+```
+
+For runtime validation in your own pre-save hook:
+
+```ts
+import { isAddress, validateStoredAddress } from "@emdash-cms/plugin-address/composite";
+
+definePlugin({
+  hooks: {
+    "content:beforeSave": async (event) => {
+      const value = event.content.shipping;
+      if (isAddress(value)) {
+        const errors = validateStoredAddress(value, "US");
+        if (errors.length) throw new Error(errors[0].message);
+      }
+    },
+  },
+});
+```
+
+The plugin doesn't auto-register this hook because it can't infer
+which fields in which collections are addresses without per-deployment
+config. Until emdash exposes a schema-introspection plugin hook, the
+caller wires validation explicitly.
+
 ## Roadmap (not in v1)
 
 - Full CLDR data for ~250 countries (libpostal-style data has license
   considerations — opted out for v1).
-- Geocoding integration. Plug a service like Mapbox or Nominatim into
-  a separate companion plugin.
-- A composite field type for emdash collections themselves (requires
-  core field-type extension hooks that don't exist yet).
+- Schema-driven auto-validation (depends on emdash core exposing a
+  way for plugins to read collection field schemas at runtime).
+- Provider abstraction with switchable Nominatim / Mapbox / Google.

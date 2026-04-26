@@ -231,11 +231,64 @@ The `content:update` action is on the roadmap; today the engine ships
 with email / webhook / log / kv:set only. Extend by forking the plugin's
 `actions.ts`.
 
+## Custom action types (pluggable registry)
+
+The action registry is exported at `@emdash-cms/plugin-rules/registry`.
+Register your own action type at module-load time:
+
+```ts
+// In another plugin's astro.config.mjs (or a tiny init file imported
+// from there). Must run before the rules plugin handles its first
+// routine — registering at module-load time satisfies that.
+
+import { registerAction } from "@emdash-cms/plugin-rules/registry";
+import type { Action } from "@emdash-cms/plugin-rules";
+import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
+
+interface SlackAction extends Action {
+  type: "slack";
+  channel: string;
+  message: string;
+}
+
+registerAction<SlackAction>("slack", async (action, tokenCtx, ctx) => {
+  if (!ctx.http) throw new Error("network:fetch missing");
+  const message = await resolveTokens(action.message, tokenCtx);
+  await ctx.http.fetch(process.env.SLACK_WEBHOOK_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ channel: action.channel, text: message }),
+  });
+});
+```
+
+Routines can now reference `{"type": "slack", "channel": "#editorial", "message": "..."}` like any built-in action.
+
+**Sandboxing constraint.** The registry is a module-scoped singleton.
+It works across all plugins running in the same process (the trusted-
+mode default). It does NOT cross V8 isolate boundaries — sandboxed
+plugins each get their own copy of this module and therefore their
+own (empty-by-default) registry. Until emdash exposes a runtime
+cross-isolate plugin API, custom actions only work in trusted mode.
+
+## Admin UI
+
+A Block Kit page at **Settings → Rules** lists every routine. Per-row
+actions:
+
+- **Enable / Disable** — flips `enabled`. For cron routines this also
+  reschedules / cancels the cron task.
+- **Test** — fires the routine immediately against a synthetic
+  `{ _testFire: true }` event payload. Useful while authoring.
+
+By design, you can't *create* or *edit* routines in the UI — that's an
+agent's job via the routines.upsert API. The UI is for visibility and
+on/off control.
+
 ## Roadmap
 
-- More built-in actions: `content:update`, `content:create`, `media:delete`,
-  `email:template-send`.
-- Pluggable action registry (load actions from another plugin via
-  cross-plugin imports — same pattern as the tokens resolver).
-- Visual rule builder (deferred — JSON spec is more agentic-friendly anyway).
+- More built-in actions: `content:update`, `content:create`,
+  `media:delete`, `email:template-send`.
+- Cross-isolate action registry once emdash exposes a runtime plugin
+  API.
 - Per-routine concurrency / dedupe windows.

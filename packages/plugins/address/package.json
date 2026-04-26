@@ -9,7 +9,9 @@
 		".": "./src/index.ts",
 		"./sandbox": "./src/sandbox-entry.ts",
 		"./util": "./src/util.ts",
-		"./countries": "./src/countries.ts"
+		"./countries": "./src/countries.ts",
+		"./composite": "./src/composite.ts",
+		"./geocoding": "./src/geocoding.ts"
 	},
 	"files": [
 		"src"

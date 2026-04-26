@@ -49,48 +49,80 @@ async function buildAdminPage(ctx: PluginContext) {
 		orderBy: { createdAt: "desc" },
 		limit: 200,
 	});
-	return {
-		blocks: [
-			{ type: "header", text: "Rules" },
-			{
-				type: "context",
+	const routines = result.items.map((i) => i.data as Routine);
+
+	const blocks: unknown[] = [
+		{ type: "header", text: "Rules" },
+		{
+			type: "context",
+			elements: [
+				{
+					type: "text",
+					text: "Routines are authored by agents via the API (POST routines.upsert). Toggle them on/off here.",
+				},
+			],
+		},
+	];
+
+	if (routines.length === 0) {
+		blocks.push({
+			type: "banner",
+			variant: "default",
+			title: "No routines yet",
+			description: "Ask an agent to create one via /_emdash/api/plugins/rules/routines.upsert.",
+		});
+	} else {
+		blocks.push({
+			type: "table",
+			blockId: "rules-list",
+			columns: [
+				{ key: "id", label: "ID", format: "text" },
+				{ key: "name", label: "Name", format: "text" },
+				{ key: "trigger", label: "Trigger", format: "text" },
+				{ key: "actions", label: "Actions", format: "text" },
+				{ key: "enabled", label: "Status", format: "badge" },
+				{ key: "lastRunAt", label: "Last run", format: "relative_time" },
+				{ key: "runCount", label: "Runs", format: "text" },
+			],
+			rows: routines.map((r) => ({
+				id: r.id,
+				name: r.name,
+				trigger:
+					r.trigger.on === "cron"
+						? `cron(${(r.trigger as { schedule: string }).schedule})`
+						: r.trigger.on,
+				actions: r.actions.map((a) => a.type).join(","),
+				enabled: r.enabled ? "Enabled" : "Disabled",
+				lastRunAt: r.stats?.lastRunAt ?? "",
+				runCount: String(r.stats?.runCount ?? 0),
+			})),
+		});
+
+		// Per-row toggle + test buttons
+		for (const r of routines) {
+			blocks.push({
+				type: "actions",
 				elements: [
+					{ type: "context", elements: [{ type: "text", text: r.id }] },
 					{
-						type: "text",
-						text: "Routines are managed via the API. POST a JSON spec to routines.upsert.",
+						type: "button",
+						text: r.enabled ? "Disable" : "Enable",
+						action_id: "toggle_routine",
+						value: r.id,
+						style: r.enabled ? "secondary" : "primary",
+					},
+					{
+						type: "button",
+						text: "Test",
+						action_id: "test_routine",
+						value: r.id,
 					},
 				],
-			},
-			{
-				type: "table",
-				blockId: "rules-list",
-				columns: [
-					{ key: "id", label: "ID", format: "text" },
-					{ key: "name", label: "Name", format: "text" },
-					{ key: "trigger", label: "Trigger", format: "text" },
-					{ key: "actions", label: "Actions", format: "text" },
-					{ key: "enabled", label: "Status", format: "badge" },
-					{ key: "lastRunAt", label: "Last run", format: "relative_time" },
-					{ key: "runCount", label: "Runs", format: "text" },
-				],
-				rows: result.items.map((item) => {
-					const r = item.data as Routine;
-					return {
-						id: r.id,
-						name: r.name,
-						trigger:
-							r.trigger.on === "cron"
-								? `cron(${(r.trigger as { schedule: string }).schedule})`
-								: r.trigger.on,
-						actions: r.actions.map((a) => a.type).join(","),
-						enabled: r.enabled ? "Enabled" : "Disabled",
-						lastRunAt: r.stats?.lastRunAt ?? "",
-						runCount: String(r.stats?.runCount ?? 0),
-					};
-				}),
-			},
-		],
-	};
+			});
+		}
+	}
+
+	return { blocks };
 }
 
 async function buildRecentWidget(ctx: PluginContext) {
@@ -333,13 +365,74 @@ export default definePlugin({
 					type?: string;
 					page?: string;
 					widget?: string;
+					action_id?: string;
+					value?: string;
 				};
+
 				if (interaction.type === "page_load" && interaction.page === "/rules") {
 					return await buildAdminPage(ctx);
 				}
 				if (interaction.type === "widget_load" && interaction.widget === "rules-recent") {
 					return await buildRecentWidget(ctx);
 				}
+
+				// Toggle enable/disable
+				if (
+					interaction.type === "block_action" &&
+					interaction.action_id === "toggle_routine" &&
+					isValidId(interaction.value)
+				) {
+					const r = (await ctx.storage.routines.get(interaction.value)) as Routine | null;
+					if (!r) {
+						return {
+							...(await buildAdminPage(ctx)),
+							toast: { message: "Routine not found", type: "error" },
+						};
+					}
+					r.enabled = !r.enabled;
+					r.updatedAt = NOW();
+					await saveRoutine(r, ctx);
+					if (r.trigger.on === "cron") await reconcileCron(ctx);
+					return {
+						...(await buildAdminPage(ctx)),
+						toast: {
+							message: `${r.name} ${r.enabled ? "enabled" : "disabled"}`,
+							type: "success",
+						},
+					};
+				}
+
+				// Test-fire a routine
+				if (
+					interaction.type === "block_action" &&
+					interaction.action_id === "test_routine" &&
+					isValidId(interaction.value)
+				) {
+					const r = (await ctx.storage.routines.get(interaction.value)) as Routine | null;
+					if (!r) {
+						return {
+							...(await buildAdminPage(ctx)),
+							toast: { message: "Routine not found", type: "error" },
+						};
+					}
+					const { executeRoutine } = await import("./engine.js");
+					try {
+						await executeRoutine(r, { _testFire: true }, ctx.site?.name ?? "Site", ctx);
+						return {
+							...(await buildAdminPage(ctx)),
+							toast: { message: `Test-fired ${r.name}`, type: "success" },
+						};
+					} catch (err) {
+						return {
+							...(await buildAdminPage(ctx)),
+							toast: {
+								message: err instanceof Error ? err.message : String(err),
+								type: "error",
+							},
+						};
+					}
+				}
+
 				return { blocks: [] };
 			},
 		},
