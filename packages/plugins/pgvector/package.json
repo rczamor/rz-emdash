@@ -1,0 +1,33 @@
+{
+	"name": "@emdash-cms/plugin-pgvector",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Postgres pgvector backend for embeddings + similarity search. HNSW index, configurable dimension, optional auto-embed-on-save. Postgres-only by design — no SQLite fallback.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./client": "./src/client.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"pgvector",
+		"embeddings",
+		"vector-search"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {
+		"pg": "^8.0.0"
+	},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}

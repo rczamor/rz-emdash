@@ -1,0 +1,34 @@
+{
+	"name": "@emdash-cms/plugin-langfuse",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Langfuse integration for EmDash agentic workflows. Traces, scores, dataset runs, prompt management. Reuses an existing self-hosted or cloud Langfuse instance via REST API — no SDK dep.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./client": "./src/client.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"langfuse",
+		"observability",
+		"evals"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {
+		"@emdash-cms/plugin-automations": "workspace:*",
+		"@emdash-cms/plugin-tokens": "workspace:*"
+	},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}

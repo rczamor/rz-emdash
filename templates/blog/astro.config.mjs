@@ -4,8 +4,12 @@ import { addressPlugin } from "@emdash-cms/plugin-address";
 import { agentsPlugin } from "@emdash-cms/plugin-agents";
 import { auditLogPlugin } from "@emdash-cms/plugin-audit-log";
 import { automationsPlugin } from "@emdash-cms/plugin-automations";
+import { brandPlugin } from "@emdash-cms/plugin-brand";
+import { designSystemPlugin } from "@emdash-cms/plugin-design-system";
+import { langfusePlugin } from "@emdash-cms/plugin-langfuse";
 import { openrouterPlugin } from "@emdash-cms/plugin-openrouter";
 import { pathautoPlugin } from "@emdash-cms/plugin-pathauto";
+import { pgvectorPlugin } from "@emdash-cms/plugin-pgvector";
 import { resendPlugin } from "@emdash-cms/plugin-resend";
 import { schedulerPlugin } from "@emdash-cms/plugin-scheduler";
 import { tasksPlugin } from "@emdash-cms/plugin-tasks";
@@ -51,8 +55,12 @@ export default defineConfig({
 				tasksPlugin(),
 				agentsPlugin(),
 				toolsPlugin(),
+				brandPlugin(),
+				designSystemPlugin(),
+				pgvectorPlugin(),
 				schedulerPlugin(),
 				openrouterPlugin(),
+				langfusePlugin(),
 			],
 		}),
 	],

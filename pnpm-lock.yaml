@@ -1336,6 +1336,12 @@ importers:
         specifier: workspace:>=0.7.0
         version: link:../../core
 
+  packages/plugins/brand:
+    dependencies:
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
+
   packages/plugins/color:
     dependencies:
       emdash:
@@ -1348,6 +1354,15 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
+
+  packages/plugins/design-system:
+    dependencies:
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
+      yaml:
+        specifier: ^2.6.0
+        version: 2.8.2
 
   packages/plugins/embeds:
     dependencies:
@@ -1384,6 +1399,18 @@ importers:
       ulidx:
         specifier: ^2.4.1
         version: 2.4.1
+
+  packages/plugins/langfuse:
+    dependencies:
+      '@emdash-cms/plugin-automations':
+        specifier: workspace:*
+        version: link:../automations
+      '@emdash-cms/plugin-tokens':
+        specifier: workspace:*
+        version: link:../tokens
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
 
   packages/plugins/marketplace-test:
     dependencies:
@@ -1427,6 +1454,15 @@ importers:
       emdash:
         specifier: workspace:>=0.7.0
         version: link:../../core
+
+  packages/plugins/pgvector:
+    dependencies:
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
+      pg:
+        specifier: ^8.0.0
+        version: 8.18.0
 
   packages/plugins/resend:
     dependencies:
@@ -1576,12 +1612,24 @@ importers:
       '@emdash-cms/plugin-automations':
         specifier: workspace:*
         version: link:../../packages/plugins/automations
+      '@emdash-cms/plugin-brand':
+        specifier: workspace:*
+        version: link:../../packages/plugins/brand
+      '@emdash-cms/plugin-design-system':
+        specifier: workspace:*
+        version: link:../../packages/plugins/design-system
+      '@emdash-cms/plugin-langfuse':
+        specifier: workspace:*
+        version: link:../../packages/plugins/langfuse
       '@emdash-cms/plugin-openrouter':
         specifier: workspace:*
         version: link:../../packages/plugins/openrouter
       '@emdash-cms/plugin-pathauto':
         specifier: workspace:*
         version: link:../../packages/plugins/pathauto
+      '@emdash-cms/plugin-pgvector':
+        specifier: workspace:*
+        version: link:../../packages/plugins/pgvector
       '@emdash-cms/plugin-resend':
         specifier: workspace:*
         version: link:../../packages/plugins/resend

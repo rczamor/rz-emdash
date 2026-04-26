@@ -1,0 +1,31 @@
+{
+	"name": "@emdash-cms/plugin-brand",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Brand voice + tone primitive for agentic content. Content-collection-based (versioned, reviewable, multi-language-friendly) — distinct from DESIGN.md (visual identity) and skills (agent capabilities). Prompt-injection helper exported for OpenRouter / Agents plugins.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./client": "./src/client.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"brand",
+		"voice",
+		"agentic"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}
