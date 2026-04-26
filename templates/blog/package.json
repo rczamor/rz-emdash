@@ -20,6 +20,8 @@
     "@astrojs/react": "catalog:",
     "@emdash-cms/plugin-audit-log": "workspace:*",
     "@emdash-cms/plugin-resend": "workspace:*",
+    "@emdash-cms/plugin-tokens": "workspace:*",
+    "@emdash-cms/plugin-webform": "workspace:*",
     "astro": "catalog:",
     "emdash": "workspace:*",
     "pg": "^8.0.0",

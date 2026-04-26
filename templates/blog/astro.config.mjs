@@ -2,6 +2,8 @@ import node from "@astrojs/node";
 import react from "@astrojs/react";
 import { auditLogPlugin } from "@emdash-cms/plugin-audit-log";
 import { resendPlugin } from "@emdash-cms/plugin-resend";
+import { tokensPlugin } from "@emdash-cms/plugin-tokens";
+import { webformPlugin } from "@emdash-cms/plugin-webform";
 import { defineConfig, fontProviders } from "astro/config";
 import emdash, { local } from "emdash/astro";
 import { postgres } from "emdash/db";
@@ -33,6 +35,8 @@ export default defineConfig({
 					from: process.env.RESEND_FROM ?? "onboarding@resend.dev",
 					replyTo: process.env.RESEND_REPLY_TO,
 				}),
+				tokensPlugin(),
+				webformPlugin(),
 			],
 		}),
 	],

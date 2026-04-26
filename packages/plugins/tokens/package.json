@@ -1,0 +1,30 @@
+{
+	"name": "@emdash-cms/plugin-tokens",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Token replacement for EmDash. Port of Drupal's Tokens module — turns {site.name} or {date|YYYY-MM-DD} patterns into real values. Importable by any plugin via @emdash-cms/plugin-tokens/resolver.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./resolver": "./src/resolver.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"tokens",
+		"templating"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}
