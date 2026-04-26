@@ -22,12 +22,17 @@
 		"design.md"
 	],
 	"license": "MIT",
+	"scripts": {
+		"test": "vitest run"
+	},
 	"peerDependencies": {
 		"emdash": "workspace:>=0.7.0"
 	},
 	"dependencies": {
 		"yaml": "^2.6.0"
 	},
-	"devDependencies": {},
+	"devDependencies": {
+		"vitest": "catalog:"
+	},
 	"optionalDependencies": {}
 }
