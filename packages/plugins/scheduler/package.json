@@ -1,0 +1,31 @@
+{
+	"name": "@emdash-cms/plugin-scheduler",
+	"private": true,
+	"version": "0.0.1",
+	"description": "One-shot scheduled jobs for EmDash. Auto-publish content from native scheduled_at, schedule unpublishes, run automations on a delay, register custom job handlers.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./registry": "./src/registry.ts"
+	},
+	"files": [
+		"src"
+	],
+	"keywords": [
+		"emdash",
+		"cms",
+		"plugin",
+		"scheduler",
+		"cron",
+		"publishing"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {},
+	"devDependencies": {},
+	"optionalDependencies": {}
+}

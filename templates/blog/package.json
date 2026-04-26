@@ -23,6 +23,8 @@
     "@emdash-cms/plugin-pathauto": "workspace:*",
     "@emdash-cms/plugin-resend": "workspace:*",
     "@emdash-cms/plugin-automations": "workspace:*",
+    "@emdash-cms/plugin-openrouter": "workspace:*",
+    "@emdash-cms/plugin-scheduler": "workspace:*",
     "@emdash-cms/plugin-tokens": "workspace:*",
     "@emdash-cms/plugin-webform": "workspace:*",
     "astro": "catalog:",
