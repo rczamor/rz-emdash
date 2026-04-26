@@ -1,15 +1,14 @@
 {
-	"name": "@emdash-cms/plugin-automations",
+	"name": "@emdash-cms/plugin-tasks",
 	"private": true,
 	"version": "0.0.1",
-	"description": "Event- and cron-driven automations for EmDash. EmDash port of Drupal's Rules module, reframed as Claude-Code-routine-style YAML/JSON specs.",
+	"description": "The Task primitive for agentic content management — units of work with goal, target, polymorphic assignee (human or agent), state machine, provenance trail, and cost ledger. The keystone of the agentic CMS framework.",
 	"type": "module",
 	"main": "src/index.ts",
 	"exports": {
 		".": "./src/index.ts",
 		"./sandbox": "./src/sandbox-entry.ts",
-		"./registry": "./src/registry.ts",
-		"./dispatch": "./src/engine.ts"
+		"./client": "./src/client.ts"
 	},
 	"files": [
 		"src"
@@ -18,17 +17,16 @@
 		"emdash",
 		"cms",
 		"plugin",
-		"automations",
-		"automation",
-		"routines",
-		"rules"
+		"tasks",
+		"workflow",
+		"agentic"
 	],
 	"license": "MIT",
 	"peerDependencies": {
 		"emdash": "workspace:>=0.7.0"
 	},
 	"dependencies": {
-		"@emdash-cms/plugin-tokens": "workspace:*"
+		"@emdash-cms/plugin-automations": "workspace:*"
 	},
 	"devDependencies": {},
 	"optionalDependencies": {}

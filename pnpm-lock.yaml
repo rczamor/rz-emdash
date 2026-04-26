@@ -1438,6 +1438,15 @@ importers:
         specifier: workspace:>=0.7.0
         version: link:../../core
 
+  packages/plugins/tasks:
+    dependencies:
+      '@emdash-cms/plugin-automations':
+        specifier: workspace:*
+        version: link:../automations
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
+
   packages/plugins/tokens:
     dependencies:
       emdash:
@@ -1555,6 +1564,9 @@ importers:
       '@emdash-cms/plugin-scheduler':
         specifier: workspace:*
         version: link:../../packages/plugins/scheduler
+      '@emdash-cms/plugin-tasks':
+        specifier: workspace:*
+        version: link:../../packages/plugins/tasks
       '@emdash-cms/plugin-tokens':
         specifier: workspace:*
         version: link:../../packages/plugins/tokens

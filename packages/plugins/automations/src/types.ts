@@ -18,7 +18,15 @@ export type EventTriggerName =
 	| "comment:beforeCreate"
 	| "comment:afterCreate"
 	| "comment:afterModerate"
-	| "email:afterSend";
+	| "email:afterSend"
+	// Task lifecycle (emitted by @emdash-cms/plugin-tasks)
+	| "task:created"
+	| "task:transitioned"
+	| "task:assigned"
+	| "task:commented"
+	| "task:cost-recorded"
+	| "task:reviewed"
+	| "task:completed";
 
 export interface EventTrigger {
 	on: EventTriggerName;
