@@ -580,7 +580,7 @@ msgstr "Wszystkie języki"
 msgid "All roles"
 msgstr "Wszystkie role"
 
-#: packages/admin/src/components/Sections.tsx:240
+#: packages/admin/src/components/Sections.tsx:241
 msgid "All Sources"
 msgstr "Wszystkie źródła"
 
@@ -878,7 +878,7 @@ msgstr "Może przeglądać treści"
 #: packages/admin/src/components/MenuList.tsx:143
 #: packages/admin/src/components/PluginManager.tsx:575
 #: packages/admin/src/components/Redirects.tsx:176
-#: packages/admin/src/components/SectionPickerModal.tsx:130
+#: packages/admin/src/components/SectionPickerModal.tsx:131
 #: packages/admin/src/components/Sections.tsx:207
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:318
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:428
@@ -896,7 +896,7 @@ msgstr "Anuluj"
 msgid "Cancel rename"
 msgstr "Anuluj zmianę nazwy"
 
-#: packages/admin/src/components/Sections.tsx:405
+#: packages/admin/src/components/Sections.tsx:406
 msgid "Cannot delete theme sections"
 msgstr "Nie można usunąć sekcji motywu"
 
@@ -1124,7 +1124,7 @@ msgstr "Połączono {0}"
 #: packages/admin/src/components/comments/CommentDetail.tsx:103
 #: packages/admin/src/components/comments/CommentInbox.tsx:300
 #: packages/admin/src/components/Dashboard.tsx:164
-#: packages/admin/src/components/PortableTextEditor.tsx:1431
+#: packages/admin/src/components/PortableTextEditor.tsx:1435
 #: packages/admin/src/components/SectionEditor.tsx:174
 #: packages/admin/src/components/Sidebar.tsx:412
 msgid "Content"
@@ -1205,7 +1205,7 @@ msgid "Copied to clipboard"
 msgstr "Skopiowano do schowka"
 
 #. placeholder {0}: section.slug
-#: packages/admin/src/components/Sections.tsx:397
+#: packages/admin/src/components/Sections.tsx:398
 msgid "Copy {0} to clipboard"
 msgstr "Skopiuj {0} do schowka"
 
@@ -1213,7 +1213,7 @@ msgstr "Skopiuj {0} do schowka"
 msgid "Copy invite link"
 msgstr "Skopiuj link zaproszenia"
 
-#: packages/admin/src/components/Sections.tsx:396
+#: packages/admin/src/components/Sections.tsx:397
 msgid "Copy slug"
 msgstr "Skopiuj slug"
 
@@ -1318,11 +1318,11 @@ msgid "Create Schema & Import"
 msgstr "Utwórz schemat i importuj"
 
 #: packages/admin/src/components/Sections.tsx:148
-#: packages/admin/src/components/Sections.tsx:268
+#: packages/admin/src/components/Sections.tsx:269
 msgid "Create Section"
 msgstr "Utwórz sekcję"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:109
+#: packages/admin/src/components/SectionPickerModal.tsx:110
 msgid "Create sections in the Sections library to use them here"
 msgstr "Utwórz sekcje w bibliotece sekcji, aby użyć ich tutaj"
 
@@ -1349,7 +1349,7 @@ msgstr "Utwórz pierwsze menu nawigacji, aby rozpocząć"
 msgid "Create your first one"
 msgstr "Utwórz pierwszy"
 
-#: packages/admin/src/components/Sections.tsx:265
+#: packages/admin/src/components/Sections.tsx:266
 msgid "Create your first reusable content section to get started."
 msgstr "Utwórz pierwszą sekcję treści wielokrotnego użytku, aby rozpocząć."
 
@@ -1402,7 +1402,7 @@ msgstr "bieżący"
 msgid "Current"
 msgstr "Bieżący"
 
-#: packages/admin/src/components/Sections.tsx:242
+#: packages/admin/src/components/Sections.tsx:243
 msgid "Custom"
 msgstr "Własny"
 
@@ -1477,8 +1477,8 @@ msgstr "Zdefiniuj strukturę swoich treści"
 #: packages/admin/src/components/MenuEditor.tsx:372
 #: packages/admin/src/components/MenuList.tsx:209
 #: packages/admin/src/components/Redirects.tsx:559
-#: packages/admin/src/components/Sections.tsx:306
-#: packages/admin/src/components/Sections.tsx:405
+#: packages/admin/src/components/Sections.tsx:307
+#: packages/admin/src/components/Sections.tsx:406
 #: packages/admin/src/components/TaxonomyManager.tsx:656
 msgid "Delete"
 msgstr "Usuń"
@@ -1492,7 +1492,7 @@ msgstr "Usunąć \"{0}\"? Tej operacji nie można cofnąć."
 #. placeholder {0}: domain.domain
 #. placeholder {0}: section.title
 #: packages/admin/src/components/ContentTypeList.tsx:229
-#: packages/admin/src/components/Sections.tsx:406
+#: packages/admin/src/components/Sections.tsx:407
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:290
 #: packages/admin/src/components/TaxonomyManager.tsx:79
 msgid "Delete {0}"
@@ -1550,7 +1550,7 @@ msgstr "Usuń przekierowanie {0}"
 msgid "Delete Redirect?"
 msgstr "Usunąć przekierowanie?"
 
-#: packages/admin/src/components/Sections.tsx:294
+#: packages/admin/src/components/Sections.tsx:295
 msgid "Delete Section?"
 msgstr "Usunąć sekcję?"
 
@@ -1564,7 +1564,7 @@ msgstr "Usunięto"
 #: packages/admin/src/components/MediaDetailPanel.tsx:256
 #: packages/admin/src/components/MenuList.tsx:210
 #: packages/admin/src/components/Redirects.tsx:560
-#: packages/admin/src/components/Sections.tsx:307
+#: packages/admin/src/components/Sections.tsx:308
 #: packages/admin/src/components/TaxonomyManager.tsx:657
 msgid "Deleting..."
 msgstr "Usuwanie..."
@@ -1775,7 +1775,7 @@ msgstr "np. MacBook Pro, iPhone"
 #: packages/admin/src/components/ContentEditor.tsx:1736
 #: packages/admin/src/components/MenuEditor.tsx:367
 #: packages/admin/src/components/MenuList.tsx:185
-#: packages/admin/src/components/Sections.tsx:390
+#: packages/admin/src/components/Sections.tsx:391
 #: packages/admin/src/components/TaxonomyManager.tsx:214
 msgid "Edit"
 msgstr "Edytuj"
@@ -1882,11 +1882,11 @@ msgid "Email verified!"
 msgstr "E-mail zweryfikowany!"
 
 #. placeholder {0}: block.label
-#: packages/admin/src/components/PortableTextEditor.tsx:1443
+#: packages/admin/src/components/PortableTextEditor.tsx:1447
 msgid "Embed a {0}"
 msgstr "Osadź {0}"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1446
+#: packages/admin/src/components/PortableTextEditor.tsx:1450
 msgid "Embeds"
 msgstr "Osadzenia"
 
@@ -2325,7 +2325,7 @@ msgid "If an account exists for <0>{email}</0>, we've sent a sign-in link."
 msgstr "Jeśli istnieje konto dla <0>{email}</0>, wysłaliśmy link do logowania."
 
 #: packages/admin/src/components/FieldEditor.tsx:200
-#: packages/admin/src/components/PortableTextEditor.tsx:1413
+#: packages/admin/src/components/PortableTextEditor.tsx:1417
 msgid "Image"
 msgstr "Obraz"
 
@@ -2424,7 +2424,7 @@ msgstr "Importuj tytuł witryny i slogan"
 msgid "Import via EmDash Exporter"
 msgstr "Importuj przez EmDash Exporter"
 
-#: packages/admin/src/components/Sections.tsx:243
+#: packages/admin/src/components/Sections.tsx:244
 msgid "Imported"
 msgstr "Zaimportowany"
 
@@ -2465,11 +2465,11 @@ msgstr "Wstaw blok kodu"
 msgid "Insert a horizontal rule"
 msgstr "Wstaw linię poziomą"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1428
+#: packages/admin/src/components/PortableTextEditor.tsx:1432
 msgid "Insert a reusable section"
 msgstr "Wstaw sekcję wielokrotnego użytku"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1414
+#: packages/admin/src/components/PortableTextEditor.tsx:1418
 msgid "Insert an image"
 msgstr "Wstaw obraz"
 
@@ -2646,6 +2646,11 @@ msgstr "Link wygasł"
 msgid "Link to another content item"
 msgstr "Link do innego elementu treści"
 
+#: packages/admin/src/components/PortableTextEditor.tsx:1867
+#: packages/admin/src/components/PortableTextEditor.tsx:2272
+msgid "Link URL"
+msgstr ""
+
 #. placeholder {0}: user.oauthAccounts.length
 #: packages/admin/src/components/users/UserDetail.tsx:276
 msgid "Linked Accounts ({0})"
@@ -2706,8 +2711,8 @@ msgstr "Ładowanie wtyczek..."
 msgid "Loading redirects..."
 msgstr "Ładowanie przekierowań..."
 
-#: packages/admin/src/components/SectionPickerModal.tsx:94
-#: packages/admin/src/components/Sections.tsx:250
+#: packages/admin/src/components/SectionPickerModal.tsx:95
+#: packages/admin/src/components/Sections.tsx:251
 msgid "Loading sections..."
 msgstr "Ładowanie sekcji..."
 
@@ -2838,7 +2843,7 @@ msgstr "Maks. długość"
 msgid "Max Value"
 msgstr "Maks. wartość"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1417
+#: packages/admin/src/components/PortableTextEditor.tsx:1421
 #: packages/admin/src/components/Sidebar.tsx:185
 #: packages/admin/src/components/WordPressImport.tsx:1164
 msgid "Media"
@@ -3252,7 +3257,7 @@ msgstr "Brak skonfigurowanych pluginów"
 msgid "No plugins found"
 msgstr "Nie znaleziono pluginów"
 
-#: packages/admin/src/components/Sections.tsx:341
+#: packages/admin/src/components/Sections.tsx:342
 msgid "No preview"
 msgstr "Brak podglądu"
 
@@ -3285,16 +3290,16 @@ msgstr "Nie znaleziono wyników"
 msgid "No revisions yet"
 msgstr "Brak rewizji"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:107
+#: packages/admin/src/components/SectionPickerModal.tsx:108
 msgid "No sections available"
 msgstr "Brak dostępnych sekcji"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:101
-#: packages/admin/src/components/Sections.tsx:257
+#: packages/admin/src/components/SectionPickerModal.tsx:102
+#: packages/admin/src/components/Sections.tsx:258
 msgid "No sections found"
 msgstr "Nie znaleziono sekcji"
 
-#: packages/admin/src/components/Sections.tsx:263
+#: packages/admin/src/components/Sections.tsx:264
 msgid "No sections yet"
 msgstr "Brak sekcji"
 
@@ -4183,6 +4188,11 @@ msgstr "Szukaj stron i treści..."
 msgid "Search plugins..."
 msgstr "Szukaj wtyczek..."
 
+#: packages/admin/src/components/SectionPickerModal.tsx:82
+#: packages/admin/src/components/Sections.tsx:225
+msgid "Search sections"
+msgstr ""
+
 #: packages/admin/src/components/SectionPickerModal.tsx:81
 #: packages/admin/src/components/Sections.tsx:224
 msgid "Search sections..."
@@ -4205,7 +4215,7 @@ msgstr "Szukaj..."
 msgid "Searchable"
 msgstr "Przeszukiwalne"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1427
+#: packages/admin/src/components/PortableTextEditor.tsx:1431
 msgid "Section"
 msgstr "Sekcja"
 
@@ -4767,7 +4777,7 @@ msgstr "Publiczny URL Twojej strony (używany do linków kanonicznych i map stro
 msgid "The theme marketplace is empty. Check back later."
 msgstr "Marketplace motywów jest pusty. Sprawdź ponownie później."
 
-#: packages/admin/src/components/Sections.tsx:241
+#: packages/admin/src/components/Sections.tsx:242
 msgid "Theme"
 msgstr "Motyw"
 
@@ -4784,7 +4794,7 @@ msgstr "Nie znaleziono motywu"
 msgid "Theme Section"
 msgstr "Sekcja motywu"
 
-#: packages/admin/src/components/Sections.tsx:298
+#: packages/admin/src/components/Sections.tsx:299
 msgid "Theme-provided sections cannot be deleted. Edit the section to create a custom copy, then delete that."
 msgstr "Sekcji dostarczonych przez motyw nie można usunąć. Edytuj sekcję, aby utworzyć własną kopię, a następnie usuń ją."
 
@@ -4851,7 +4861,7 @@ msgid "This will permanently delete \"{0}\" and remove it from all content."
 msgstr "This will permanently delete \"{0}\" and remove it from all content."
 
 #. placeholder {0}: sectionToDelete?.title
-#: packages/admin/src/components/Sections.tsx:302
+#: packages/admin/src/components/Sections.tsx:303
 msgid "This will permanently delete \"{0}\". This action cannot be undone."
 msgstr "This will permanently delete \"{0}\". This action cannot be undone."
 
@@ -4967,11 +4977,11 @@ msgid "Try a different search term"
 msgstr "Spróbuj innego wyszukiwania"
 
 #: packages/admin/src/components/ContentPickerModal.tsx:177
-#: packages/admin/src/components/SectionPickerModal.tsx:102
+#: packages/admin/src/components/SectionPickerModal.tsx:103
 msgid "Try adjusting your search"
 msgstr "Spróbuj zmienić wyszukiwanie"
 
-#: packages/admin/src/components/Sections.tsx:258
+#: packages/admin/src/components/Sections.tsx:259
 msgid "Try adjusting your search or filters."
 msgstr "Spróbuj zmienić wyszukiwanie lub filtry."
 

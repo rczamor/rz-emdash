@@ -580,7 +580,7 @@ msgstr "所有語言"
 msgid "All roles"
 msgstr "所有角色"
 
-#: packages/admin/src/components/Sections.tsx:240
+#: packages/admin/src/components/Sections.tsx:241
 msgid "All Sources"
 msgstr "所有來源"
 
@@ -878,7 +878,7 @@ msgstr "可以查看內容"
 #: packages/admin/src/components/MenuList.tsx:143
 #: packages/admin/src/components/PluginManager.tsx:575
 #: packages/admin/src/components/Redirects.tsx:176
-#: packages/admin/src/components/SectionPickerModal.tsx:130
+#: packages/admin/src/components/SectionPickerModal.tsx:131
 #: packages/admin/src/components/Sections.tsx:207
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:318
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:428
@@ -896,7 +896,7 @@ msgstr "取消"
 msgid "Cancel rename"
 msgstr "取消重命名"
 
-#: packages/admin/src/components/Sections.tsx:405
+#: packages/admin/src/components/Sections.tsx:406
 msgid "Cannot delete theme sections"
 msgstr "無法刪除主題區塊"
 
@@ -1124,7 +1124,7 @@ msgstr "已連接 {0}"
 #: packages/admin/src/components/comments/CommentDetail.tsx:103
 #: packages/admin/src/components/comments/CommentInbox.tsx:300
 #: packages/admin/src/components/Dashboard.tsx:164
-#: packages/admin/src/components/PortableTextEditor.tsx:1431
+#: packages/admin/src/components/PortableTextEditor.tsx:1435
 #: packages/admin/src/components/SectionEditor.tsx:174
 #: packages/admin/src/components/Sidebar.tsx:412
 msgid "Content"
@@ -1205,7 +1205,7 @@ msgid "Copied to clipboard"
 msgstr "已複製到剪貼板"
 
 #. placeholder {0}: section.slug
-#: packages/admin/src/components/Sections.tsx:397
+#: packages/admin/src/components/Sections.tsx:398
 msgid "Copy {0} to clipboard"
 msgstr "複製 {0} 到剪貼板"
 
@@ -1213,7 +1213,7 @@ msgstr "複製 {0} 到剪貼板"
 msgid "Copy invite link"
 msgstr "複製邀請鏈接"
 
-#: packages/admin/src/components/Sections.tsx:396
+#: packages/admin/src/components/Sections.tsx:397
 msgid "Copy slug"
 msgstr "複製 slug"
 
@@ -1318,11 +1318,11 @@ msgid "Create Schema & Import"
 msgstr "創建架構並導入"
 
 #: packages/admin/src/components/Sections.tsx:148
-#: packages/admin/src/components/Sections.tsx:268
+#: packages/admin/src/components/Sections.tsx:269
 msgid "Create Section"
 msgstr "創建區塊"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:109
+#: packages/admin/src/components/SectionPickerModal.tsx:110
 msgid "Create sections in the Sections library to use them here"
 msgstr "在區塊庫中創建區塊以便在此使用"
 
@@ -1349,7 +1349,7 @@ msgstr "創建您的第一個導航菜單以開始使用"
 msgid "Create your first one"
 msgstr "創建第一個內容"
 
-#: packages/admin/src/components/Sections.tsx:265
+#: packages/admin/src/components/Sections.tsx:266
 msgid "Create your first reusable content section to get started."
 msgstr "創建您的第一個可重用內容區塊以開始使用。"
 
@@ -1402,7 +1402,7 @@ msgstr "當前"
 msgid "Current"
 msgstr "當前版本"
 
-#: packages/admin/src/components/Sections.tsx:242
+#: packages/admin/src/components/Sections.tsx:243
 msgid "Custom"
 msgstr "自定義"
 
@@ -1477,8 +1477,8 @@ msgstr "定義您的內容結構"
 #: packages/admin/src/components/MenuEditor.tsx:372
 #: packages/admin/src/components/MenuList.tsx:209
 #: packages/admin/src/components/Redirects.tsx:559
-#: packages/admin/src/components/Sections.tsx:306
-#: packages/admin/src/components/Sections.tsx:405
+#: packages/admin/src/components/Sections.tsx:307
+#: packages/admin/src/components/Sections.tsx:406
 #: packages/admin/src/components/TaxonomyManager.tsx:656
 msgid "Delete"
 msgstr "刪除"
@@ -1492,7 +1492,7 @@ msgstr "刪除 \"{0}\"？此操作無法撤銷。"
 #. placeholder {0}: domain.domain
 #. placeholder {0}: section.title
 #: packages/admin/src/components/ContentTypeList.tsx:229
-#: packages/admin/src/components/Sections.tsx:406
+#: packages/admin/src/components/Sections.tsx:407
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:290
 #: packages/admin/src/components/TaxonomyManager.tsx:79
 msgid "Delete {0}"
@@ -1550,7 +1550,7 @@ msgstr "刪除重定向 {0}"
 msgid "Delete Redirect?"
 msgstr "刪除重定向？"
 
-#: packages/admin/src/components/Sections.tsx:294
+#: packages/admin/src/components/Sections.tsx:295
 msgid "Delete Section?"
 msgstr "刪除區塊？"
 
@@ -1564,7 +1564,7 @@ msgstr "已刪除"
 #: packages/admin/src/components/MediaDetailPanel.tsx:256
 #: packages/admin/src/components/MenuList.tsx:210
 #: packages/admin/src/components/Redirects.tsx:560
-#: packages/admin/src/components/Sections.tsx:307
+#: packages/admin/src/components/Sections.tsx:308
 #: packages/admin/src/components/TaxonomyManager.tsx:657
 msgid "Deleting..."
 msgstr "刪除中..."
@@ -1775,7 +1775,7 @@ msgstr "例如：MacBook Pro、iPhone"
 #: packages/admin/src/components/ContentEditor.tsx:1736
 #: packages/admin/src/components/MenuEditor.tsx:367
 #: packages/admin/src/components/MenuList.tsx:185
-#: packages/admin/src/components/Sections.tsx:390
+#: packages/admin/src/components/Sections.tsx:391
 #: packages/admin/src/components/TaxonomyManager.tsx:214
 msgid "Edit"
 msgstr "編輯"
@@ -1882,11 +1882,11 @@ msgid "Email verified!"
 msgstr "郵箱已驗證！"
 
 #. placeholder {0}: block.label
-#: packages/admin/src/components/PortableTextEditor.tsx:1443
+#: packages/admin/src/components/PortableTextEditor.tsx:1447
 msgid "Embed a {0}"
 msgstr "嵌入 {0}"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1446
+#: packages/admin/src/components/PortableTextEditor.tsx:1450
 msgid "Embeds"
 msgstr "嵌入"
 
@@ -2325,7 +2325,7 @@ msgid "If an account exists for <0>{email}</0>, we've sent a sign-in link."
 msgstr "如果存在與 <0>{email}</0> 關聯的帳號，我們已發送登錄鏈接。"
 
 #: packages/admin/src/components/FieldEditor.tsx:200
-#: packages/admin/src/components/PortableTextEditor.tsx:1413
+#: packages/admin/src/components/PortableTextEditor.tsx:1417
 msgid "Image"
 msgstr "圖片"
 
@@ -2424,7 +2424,7 @@ msgstr "導入站點標題和副標題"
 msgid "Import via EmDash Exporter"
 msgstr "通過 EmDash Exporter 導入"
 
-#: packages/admin/src/components/Sections.tsx:243
+#: packages/admin/src/components/Sections.tsx:244
 msgid "Imported"
 msgstr "已導入"
 
@@ -2465,11 +2465,11 @@ msgstr "插入代碼塊"
 msgid "Insert a horizontal rule"
 msgstr "插入水平分隔線"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1428
+#: packages/admin/src/components/PortableTextEditor.tsx:1432
 msgid "Insert a reusable section"
 msgstr "插入可複用區塊"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1414
+#: packages/admin/src/components/PortableTextEditor.tsx:1418
 msgid "Insert an image"
 msgstr "插入圖片"
 
@@ -2646,6 +2646,11 @@ msgstr "鏈接已過期"
 msgid "Link to another content item"
 msgstr "鏈接到另一個內容項"
 
+#: packages/admin/src/components/PortableTextEditor.tsx:1867
+#: packages/admin/src/components/PortableTextEditor.tsx:2272
+msgid "Link URL"
+msgstr ""
+
 #. placeholder {0}: user.oauthAccounts.length
 #: packages/admin/src/components/users/UserDetail.tsx:276
 msgid "Linked Accounts ({0})"
@@ -2706,8 +2711,8 @@ msgstr "正在加載插件..."
 msgid "Loading redirects..."
 msgstr "正在加載重定向..."
 
-#: packages/admin/src/components/SectionPickerModal.tsx:94
-#: packages/admin/src/components/Sections.tsx:250
+#: packages/admin/src/components/SectionPickerModal.tsx:95
+#: packages/admin/src/components/Sections.tsx:251
 msgid "Loading sections..."
 msgstr "正在加載區塊..."
 
@@ -2838,7 +2843,7 @@ msgstr "最大長度"
 msgid "Max Value"
 msgstr "最大值"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1417
+#: packages/admin/src/components/PortableTextEditor.tsx:1421
 #: packages/admin/src/components/Sidebar.tsx:185
 #: packages/admin/src/components/WordPressImport.tsx:1164
 msgid "Media"
@@ -3252,7 +3257,7 @@ msgstr "未配置插件"
 msgid "No plugins found"
 msgstr "未找到插件"
 
-#: packages/admin/src/components/Sections.tsx:341
+#: packages/admin/src/components/Sections.tsx:342
 msgid "No preview"
 msgstr "無預覽"
 
@@ -3285,16 +3290,16 @@ msgstr "未找到結果"
 msgid "No revisions yet"
 msgstr "暫無修訂歷史"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:107
+#: packages/admin/src/components/SectionPickerModal.tsx:108
 msgid "No sections available"
 msgstr "無可用區塊"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:101
-#: packages/admin/src/components/Sections.tsx:257
+#: packages/admin/src/components/SectionPickerModal.tsx:102
+#: packages/admin/src/components/Sections.tsx:258
 msgid "No sections found"
 msgstr "未找到區塊"
 
-#: packages/admin/src/components/Sections.tsx:263
+#: packages/admin/src/components/Sections.tsx:264
 msgid "No sections yet"
 msgstr "暫無區塊"
 
@@ -4183,6 +4188,11 @@ msgstr "搜索頁面和內容..."
 msgid "Search plugins..."
 msgstr "搜索插件..."
 
+#: packages/admin/src/components/SectionPickerModal.tsx:82
+#: packages/admin/src/components/Sections.tsx:225
+msgid "Search sections"
+msgstr ""
+
 #: packages/admin/src/components/SectionPickerModal.tsx:81
 #: packages/admin/src/components/Sections.tsx:224
 msgid "Search sections..."
@@ -4205,7 +4215,7 @@ msgstr "搜索..."
 msgid "Searchable"
 msgstr "可搜索"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1427
+#: packages/admin/src/components/PortableTextEditor.tsx:1431
 msgid "Section"
 msgstr "區塊"
 
@@ -4767,7 +4777,7 @@ msgstr "您站點的公共 URL（用於規範鏈接和站點地圖）"
 msgid "The theme marketplace is empty. Check back later."
 msgstr "主題市場爲空。請稍後再來。"
 
-#: packages/admin/src/components/Sections.tsx:241
+#: packages/admin/src/components/Sections.tsx:242
 msgid "Theme"
 msgstr "主題"
 
@@ -4784,7 +4794,7 @@ msgstr "未找到主題"
 msgid "Theme Section"
 msgstr "主題區塊"
 
-#: packages/admin/src/components/Sections.tsx:298
+#: packages/admin/src/components/Sections.tsx:299
 msgid "Theme-provided sections cannot be deleted. Edit the section to create a custom copy, then delete that."
 msgstr "主題提供的區塊無法刪除。編輯區塊以創建自定義副本，然後刪除該副本。"
 
@@ -4851,7 +4861,7 @@ msgid "This will permanently delete \"{0}\" and remove it from all content."
 msgstr "這將永久刪除「{0}」並將其從所有內容中移除。"
 
 #. placeholder {0}: sectionToDelete?.title
-#: packages/admin/src/components/Sections.tsx:302
+#: packages/admin/src/components/Sections.tsx:303
 msgid "This will permanently delete \"{0}\". This action cannot be undone."
 msgstr "這將永久刪除「{0}」。此操作無法撤銷。"
 
@@ -4967,11 +4977,11 @@ msgid "Try a different search term"
 msgstr "嘗試其他搜索詞"
 
 #: packages/admin/src/components/ContentPickerModal.tsx:177
-#: packages/admin/src/components/SectionPickerModal.tsx:102
+#: packages/admin/src/components/SectionPickerModal.tsx:103
 msgid "Try adjusting your search"
 msgstr "嘗試調整您的搜索"
 
-#: packages/admin/src/components/Sections.tsx:258
+#: packages/admin/src/components/Sections.tsx:259
 msgid "Try adjusting your search or filters."
 msgstr "嘗試調整您的搜索或篩選條件。"
 

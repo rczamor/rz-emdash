@@ -222,6 +222,7 @@ export function Sections() {
 					<MagnifyingGlass className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-kumo-subtle" />
 					<Input
 						placeholder={t`Search sections...`}
+						aria-label={t`Search sections`}
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 						className="ps-10"

@@ -580,7 +580,7 @@ msgstr "すべての言語"
 msgid "All roles"
 msgstr "すべてのロール"
 
-#: packages/admin/src/components/Sections.tsx:240
+#: packages/admin/src/components/Sections.tsx:241
 msgid "All Sources"
 msgstr "すべてのソース"
 
@@ -878,7 +878,7 @@ msgstr "コンテンツを閲覧可能"
 #: packages/admin/src/components/MenuList.tsx:143
 #: packages/admin/src/components/PluginManager.tsx:575
 #: packages/admin/src/components/Redirects.tsx:176
-#: packages/admin/src/components/SectionPickerModal.tsx:130
+#: packages/admin/src/components/SectionPickerModal.tsx:131
 #: packages/admin/src/components/Sections.tsx:207
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:318
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:428
@@ -896,7 +896,7 @@ msgstr "キャンセル"
 msgid "Cancel rename"
 msgstr "名前変更をキャンセル"
 
-#: packages/admin/src/components/Sections.tsx:405
+#: packages/admin/src/components/Sections.tsx:406
 msgid "Cannot delete theme sections"
 msgstr "テーマセクションは削除できません"
 
@@ -1124,7 +1124,7 @@ msgstr "{0}に接続済み"
 #: packages/admin/src/components/comments/CommentDetail.tsx:103
 #: packages/admin/src/components/comments/CommentInbox.tsx:300
 #: packages/admin/src/components/Dashboard.tsx:164
-#: packages/admin/src/components/PortableTextEditor.tsx:1431
+#: packages/admin/src/components/PortableTextEditor.tsx:1435
 #: packages/admin/src/components/SectionEditor.tsx:174
 #: packages/admin/src/components/Sidebar.tsx:412
 msgid "Content"
@@ -1205,7 +1205,7 @@ msgid "Copied to clipboard"
 msgstr "クリップボードにコピーしました"
 
 #. placeholder {0}: section.slug
-#: packages/admin/src/components/Sections.tsx:397
+#: packages/admin/src/components/Sections.tsx:398
 msgid "Copy {0} to clipboard"
 msgstr "{0}をクリップボードにコピー"
 
@@ -1213,7 +1213,7 @@ msgstr "{0}をクリップボードにコピー"
 msgid "Copy invite link"
 msgstr "招待リンクをコピー"
 
-#: packages/admin/src/components/Sections.tsx:396
+#: packages/admin/src/components/Sections.tsx:397
 msgid "Copy slug"
 msgstr "スラッグをコピー"
 
@@ -1318,11 +1318,11 @@ msgid "Create Schema & Import"
 msgstr "スキーマを作成してインポート"
 
 #: packages/admin/src/components/Sections.tsx:148
-#: packages/admin/src/components/Sections.tsx:268
+#: packages/admin/src/components/Sections.tsx:269
 msgid "Create Section"
 msgstr "セクションを作成"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:109
+#: packages/admin/src/components/SectionPickerModal.tsx:110
 msgid "Create sections in the Sections library to use them here"
 msgstr "セクションライブラリでセクションを作成して使用できます"
 
@@ -1349,7 +1349,7 @@ msgstr "最初のナビゲーションメニューを作成して始めましょ
 msgid "Create your first one"
 msgstr "最初のコンテンツを作成しましょう"
 
-#: packages/admin/src/components/Sections.tsx:265
+#: packages/admin/src/components/Sections.tsx:266
 msgid "Create your first reusable content section to get started."
 msgstr "最初の再利用可能なコンテンツセクションを作成して始めましょう。"
 
@@ -1402,7 +1402,7 @@ msgstr "現在"
 msgid "Current"
 msgstr "現在"
 
-#: packages/admin/src/components/Sections.tsx:242
+#: packages/admin/src/components/Sections.tsx:243
 msgid "Custom"
 msgstr "カスタム"
 
@@ -1477,8 +1477,8 @@ msgstr "コンテンツの構造を定義"
 #: packages/admin/src/components/MenuEditor.tsx:372
 #: packages/admin/src/components/MenuList.tsx:209
 #: packages/admin/src/components/Redirects.tsx:559
-#: packages/admin/src/components/Sections.tsx:306
-#: packages/admin/src/components/Sections.tsx:405
+#: packages/admin/src/components/Sections.tsx:307
+#: packages/admin/src/components/Sections.tsx:406
 #: packages/admin/src/components/TaxonomyManager.tsx:656
 msgid "Delete"
 msgstr "削除"
@@ -1492,7 +1492,7 @@ msgstr "\"{0}\"を削除しますか？この操作は取り消せません。"
 #. placeholder {0}: domain.domain
 #. placeholder {0}: section.title
 #: packages/admin/src/components/ContentTypeList.tsx:229
-#: packages/admin/src/components/Sections.tsx:406
+#: packages/admin/src/components/Sections.tsx:407
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:290
 #: packages/admin/src/components/TaxonomyManager.tsx:79
 msgid "Delete {0}"
@@ -1550,7 +1550,7 @@ msgstr "リダイレクト{0}を削除"
 msgid "Delete Redirect?"
 msgstr "リダイレクトを削除しますか？"
 
-#: packages/admin/src/components/Sections.tsx:294
+#: packages/admin/src/components/Sections.tsx:295
 msgid "Delete Section?"
 msgstr "セクションを削除しますか？"
 
@@ -1564,7 +1564,7 @@ msgstr "削除済み"
 #: packages/admin/src/components/MediaDetailPanel.tsx:256
 #: packages/admin/src/components/MenuList.tsx:210
 #: packages/admin/src/components/Redirects.tsx:560
-#: packages/admin/src/components/Sections.tsx:307
+#: packages/admin/src/components/Sections.tsx:308
 #: packages/admin/src/components/TaxonomyManager.tsx:657
 msgid "Deleting..."
 msgstr "削除中..."
@@ -1775,7 +1775,7 @@ msgstr "例: MacBook Pro、iPhone"
 #: packages/admin/src/components/ContentEditor.tsx:1736
 #: packages/admin/src/components/MenuEditor.tsx:367
 #: packages/admin/src/components/MenuList.tsx:185
-#: packages/admin/src/components/Sections.tsx:390
+#: packages/admin/src/components/Sections.tsx:391
 #: packages/admin/src/components/TaxonomyManager.tsx:214
 msgid "Edit"
 msgstr "編集"
@@ -1882,11 +1882,11 @@ msgid "Email verified!"
 msgstr "メールが認証されました！"
 
 #. placeholder {0}: block.label
-#: packages/admin/src/components/PortableTextEditor.tsx:1443
+#: packages/admin/src/components/PortableTextEditor.tsx:1447
 msgid "Embed a {0}"
 msgstr "{0}を埋め込む"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1446
+#: packages/admin/src/components/PortableTextEditor.tsx:1450
 msgid "Embeds"
 msgstr "埋め込み"
 
@@ -2325,7 +2325,7 @@ msgid "If an account exists for <0>{email}</0>, we've sent a sign-in link."
 msgstr "<0>{email}</0>のアカウントが存在する場合、サインインリンクを送信しました。"
 
 #: packages/admin/src/components/FieldEditor.tsx:200
-#: packages/admin/src/components/PortableTextEditor.tsx:1413
+#: packages/admin/src/components/PortableTextEditor.tsx:1417
 msgid "Image"
 msgstr "画像"
 
@@ -2424,7 +2424,7 @@ msgstr "サイトタイトルとキャッチフレーズをインポート"
 msgid "Import via EmDash Exporter"
 msgstr "EmDash Exporterでインポート"
 
-#: packages/admin/src/components/Sections.tsx:243
+#: packages/admin/src/components/Sections.tsx:244
 msgid "Imported"
 msgstr "インポート済み"
 
@@ -2465,11 +2465,11 @@ msgstr "コードブロックを挿入"
 msgid "Insert a horizontal rule"
 msgstr "水平線を挿入"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1428
+#: packages/admin/src/components/PortableTextEditor.tsx:1432
 msgid "Insert a reusable section"
 msgstr "再利用可能なセクションを挿入"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1414
+#: packages/admin/src/components/PortableTextEditor.tsx:1418
 msgid "Insert an image"
 msgstr "画像を挿入"
 
@@ -2646,6 +2646,11 @@ msgstr "リンクの有効期限が切れました"
 msgid "Link to another content item"
 msgstr "他のコンテンツアイテムへのリンク"
 
+#: packages/admin/src/components/PortableTextEditor.tsx:1867
+#: packages/admin/src/components/PortableTextEditor.tsx:2272
+msgid "Link URL"
+msgstr ""
+
 #. placeholder {0}: user.oauthAccounts.length
 #: packages/admin/src/components/users/UserDetail.tsx:276
 msgid "Linked Accounts ({0})"
@@ -2706,8 +2711,8 @@ msgstr "プラグインを読み込み中..."
 msgid "Loading redirects..."
 msgstr "リダイレクトを読み込み中..."
 
-#: packages/admin/src/components/SectionPickerModal.tsx:94
-#: packages/admin/src/components/Sections.tsx:250
+#: packages/admin/src/components/SectionPickerModal.tsx:95
+#: packages/admin/src/components/Sections.tsx:251
 msgid "Loading sections..."
 msgstr "セクションを読み込み中..."
 
@@ -2838,7 +2843,7 @@ msgstr "最大文字数"
 msgid "Max Value"
 msgstr "最大値"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1417
+#: packages/admin/src/components/PortableTextEditor.tsx:1421
 #: packages/admin/src/components/Sidebar.tsx:185
 #: packages/admin/src/components/WordPressImport.tsx:1164
 msgid "Media"
@@ -3252,7 +3257,7 @@ msgstr "プラグインが設定されていません"
 msgid "No plugins found"
 msgstr "プラグインが見つかりません"
 
-#: packages/admin/src/components/Sections.tsx:341
+#: packages/admin/src/components/Sections.tsx:342
 msgid "No preview"
 msgstr "プレビューなし"
 
@@ -3285,16 +3290,16 @@ msgstr "結果が見つかりませんでした"
 msgid "No revisions yet"
 msgstr "リビジョンはまだありません"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:107
+#: packages/admin/src/components/SectionPickerModal.tsx:108
 msgid "No sections available"
 msgstr "利用可能なセクションはありません"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:101
-#: packages/admin/src/components/Sections.tsx:257
+#: packages/admin/src/components/SectionPickerModal.tsx:102
+#: packages/admin/src/components/Sections.tsx:258
 msgid "No sections found"
 msgstr "セクションが見つかりません"
 
-#: packages/admin/src/components/Sections.tsx:263
+#: packages/admin/src/components/Sections.tsx:264
 msgid "No sections yet"
 msgstr "セクションはまだありません"
 
@@ -4183,6 +4188,11 @@ msgstr "ページやコンテンツを検索..."
 msgid "Search plugins..."
 msgstr "プラグインを検索..."
 
+#: packages/admin/src/components/SectionPickerModal.tsx:82
+#: packages/admin/src/components/Sections.tsx:225
+msgid "Search sections"
+msgstr ""
+
 #: packages/admin/src/components/SectionPickerModal.tsx:81
 #: packages/admin/src/components/Sections.tsx:224
 msgid "Search sections..."
@@ -4205,7 +4215,7 @@ msgstr "検索..."
 msgid "Searchable"
 msgstr "検索可能"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1427
+#: packages/admin/src/components/PortableTextEditor.tsx:1431
 msgid "Section"
 msgstr "セクション"
 
@@ -4767,7 +4777,7 @@ msgstr "サイトの公開URL（正規リンクとサイトマップに使用）
 msgid "The theme marketplace is empty. Check back later."
 msgstr "テーマのマーケットプレイスは空です。後で確認してください。"
 
-#: packages/admin/src/components/Sections.tsx:241
+#: packages/admin/src/components/Sections.tsx:242
 msgid "Theme"
 msgstr "テーマ"
 
@@ -4784,7 +4794,7 @@ msgstr "テーマが見つかりません"
 msgid "Theme Section"
 msgstr "テーマセクション"
 
-#: packages/admin/src/components/Sections.tsx:298
+#: packages/admin/src/components/Sections.tsx:299
 msgid "Theme-provided sections cannot be deleted. Edit the section to create a custom copy, then delete that."
 msgstr "テーマ提供のセクションは削除できません。セクションを編集してカスタムコピーを作成し、それを削除してください。"
 
@@ -4851,7 +4861,7 @@ msgid "This will permanently delete \"{0}\" and remove it from all content."
 msgstr "\"{0}\"を完全に削除し、すべてのコンテンツから削除されます。"
 
 #. placeholder {0}: sectionToDelete?.title
-#: packages/admin/src/components/Sections.tsx:302
+#: packages/admin/src/components/Sections.tsx:303
 msgid "This will permanently delete \"{0}\". This action cannot be undone."
 msgstr "\"{0}\"を完全に削除します。この操作は取り消せません。"
 
@@ -4967,11 +4977,11 @@ msgid "Try a different search term"
 msgstr "別の検索キーワードをお試しください"
 
 #: packages/admin/src/components/ContentPickerModal.tsx:177
-#: packages/admin/src/components/SectionPickerModal.tsx:102
+#: packages/admin/src/components/SectionPickerModal.tsx:103
 msgid "Try adjusting your search"
 msgstr "検索条件を変更してみてください"
 
-#: packages/admin/src/components/Sections.tsx:258
+#: packages/admin/src/components/Sections.tsx:259
 msgid "Try adjusting your search or filters."
 msgstr "検索条件やフィルタを変更してみてください。"
 

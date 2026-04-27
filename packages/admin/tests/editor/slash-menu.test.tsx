@@ -10,7 +10,7 @@
  */
 
 import type { Editor } from "@tiptap/react";
-import { userEvent } from "@vitest/browser/context";
+import { userEvent } from "vitest/browser";
 import { describe, it, expect, vi } from "vitest";
 
 import type { PortableTextEditorProps } from "../../src/components/PortableTextEditor";

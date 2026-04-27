@@ -584,7 +584,7 @@ msgstr "جميع المَحليات"
 msgid "All roles"
 msgstr "جميع الأدوار"
 
-#: packages/admin/src/components/Sections.tsx:240
+#: packages/admin/src/components/Sections.tsx:241
 msgid "All Sources"
 msgstr "جميع المصادر"
 
@@ -882,7 +882,7 @@ msgstr "يمكنه عرض المحتوى"
 #: packages/admin/src/components/MenuList.tsx:143
 #: packages/admin/src/components/PluginManager.tsx:575
 #: packages/admin/src/components/Redirects.tsx:176
-#: packages/admin/src/components/SectionPickerModal.tsx:130
+#: packages/admin/src/components/SectionPickerModal.tsx:131
 #: packages/admin/src/components/Sections.tsx:207
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:318
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:428
@@ -900,7 +900,7 @@ msgstr "إلغاء"
 msgid "Cancel rename"
 msgstr "إلغاء إعادة التسمية"
 
-#: packages/admin/src/components/Sections.tsx:405
+#: packages/admin/src/components/Sections.tsx:406
 msgid "Cannot delete theme sections"
 msgstr "لا يمكن حذف أقسام المظهر"
 
@@ -1128,7 +1128,7 @@ msgstr "متصل {0}"
 #: packages/admin/src/components/comments/CommentDetail.tsx:103
 #: packages/admin/src/components/comments/CommentInbox.tsx:300
 #: packages/admin/src/components/Dashboard.tsx:164
-#: packages/admin/src/components/PortableTextEditor.tsx:1431
+#: packages/admin/src/components/PortableTextEditor.tsx:1435
 #: packages/admin/src/components/SectionEditor.tsx:174
 #: packages/admin/src/components/Sidebar.tsx:412
 msgid "Content"
@@ -1209,7 +1209,7 @@ msgid "Copied to clipboard"
 msgstr "تم النسخ إلى الحافظة"
 
 #. placeholder {0}: section.slug
-#: packages/admin/src/components/Sections.tsx:397
+#: packages/admin/src/components/Sections.tsx:398
 msgid "Copy {0} to clipboard"
 msgstr "نسخ {0} إلى الحافظة"
 
@@ -1217,7 +1217,7 @@ msgstr "نسخ {0} إلى الحافظة"
 msgid "Copy invite link"
 msgstr "نسخ رابط الدعوة"
 
-#: packages/admin/src/components/Sections.tsx:396
+#: packages/admin/src/components/Sections.tsx:397
 msgid "Copy slug"
 msgstr "نسخ الاسم اللطيف"
 
@@ -1322,11 +1322,11 @@ msgid "Create Schema & Import"
 msgstr "إنشاء المخطط والاستيراد"
 
 #: packages/admin/src/components/Sections.tsx:148
-#: packages/admin/src/components/Sections.tsx:268
+#: packages/admin/src/components/Sections.tsx:269
 msgid "Create Section"
 msgstr "إنشاء قسم"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:109
+#: packages/admin/src/components/SectionPickerModal.tsx:110
 msgid "Create sections in the Sections library to use them here"
 msgstr "قم بإنشاء أقسام في مكتبة الأقسام لاستخدامها هنا"
 
@@ -1353,7 +1353,7 @@ msgstr "قم بإنشاء أول قائمة تنقل خاصة بك للبدء"
 msgid "Create your first one"
 msgstr "قم بإنشاء أول واحد خاص بك"
 
-#: packages/admin/src/components/Sections.tsx:265
+#: packages/admin/src/components/Sections.tsx:266
 msgid "Create your first reusable content section to get started."
 msgstr "أنشئ أول قسم محتوى قابل لإعادة الاستخدام خاص بك للبدء."
 
@@ -1406,7 +1406,7 @@ msgstr "الحالي"
 msgid "Current"
 msgstr "الحالي"
 
-#: packages/admin/src/components/Sections.tsx:242
+#: packages/admin/src/components/Sections.tsx:243
 msgid "Custom"
 msgstr "مخصص"
 
@@ -1481,8 +1481,8 @@ msgstr "حدد هيكل محتواك"
 #: packages/admin/src/components/MenuEditor.tsx:372
 #: packages/admin/src/components/MenuList.tsx:209
 #: packages/admin/src/components/Redirects.tsx:559
-#: packages/admin/src/components/Sections.tsx:306
-#: packages/admin/src/components/Sections.tsx:405
+#: packages/admin/src/components/Sections.tsx:307
+#: packages/admin/src/components/Sections.tsx:406
 #: packages/admin/src/components/TaxonomyManager.tsx:656
 msgid "Delete"
 msgstr "حذف"
@@ -1496,7 +1496,7 @@ msgstr "حذف \"{0}\"؟ لا يمكن التراجع عن هذا الإجراء
 #. placeholder {0}: domain.domain
 #. placeholder {0}: section.title
 #: packages/admin/src/components/ContentTypeList.tsx:229
-#: packages/admin/src/components/Sections.tsx:406
+#: packages/admin/src/components/Sections.tsx:407
 #: packages/admin/src/components/settings/AllowedDomainsSettings.tsx:290
 #: packages/admin/src/components/TaxonomyManager.tsx:79
 msgid "Delete {0}"
@@ -1554,7 +1554,7 @@ msgstr "حذف إعادة التوجيه {0}"
 msgid "Delete Redirect?"
 msgstr "حذف إعادة التوجيه؟"
 
-#: packages/admin/src/components/Sections.tsx:294
+#: packages/admin/src/components/Sections.tsx:295
 msgid "Delete Section?"
 msgstr "حذف القسم؟"
 
@@ -1568,7 +1568,7 @@ msgstr "محذوف"
 #: packages/admin/src/components/MediaDetailPanel.tsx:256
 #: packages/admin/src/components/MenuList.tsx:210
 #: packages/admin/src/components/Redirects.tsx:560
-#: packages/admin/src/components/Sections.tsx:307
+#: packages/admin/src/components/Sections.tsx:308
 #: packages/admin/src/components/TaxonomyManager.tsx:657
 msgid "Deleting..."
 msgstr "جاري الحذف..."
@@ -1779,7 +1779,7 @@ msgstr "مثال: MacBook Pro, iPhone"
 #: packages/admin/src/components/ContentEditor.tsx:1736
 #: packages/admin/src/components/MenuEditor.tsx:367
 #: packages/admin/src/components/MenuList.tsx:185
-#: packages/admin/src/components/Sections.tsx:390
+#: packages/admin/src/components/Sections.tsx:391
 #: packages/admin/src/components/TaxonomyManager.tsx:214
 msgid "Edit"
 msgstr "تعديل"
@@ -1886,11 +1886,11 @@ msgid "Email verified!"
 msgstr "تم التحقق من البريد الإلكتروني!"
 
 #. placeholder {0}: block.label
-#: packages/admin/src/components/PortableTextEditor.tsx:1443
+#: packages/admin/src/components/PortableTextEditor.tsx:1447
 msgid "Embed a {0}"
 msgstr "تضمين {0}"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1446
+#: packages/admin/src/components/PortableTextEditor.tsx:1450
 msgid "Embeds"
 msgstr "المضمنات"
 
@@ -2329,7 +2329,7 @@ msgid "If an account exists for <0>{email}</0>, we've sent a sign-in link."
 msgstr "إذا كان يوجد حساب لـ <0>{email}</0>، قمنا بإرسال رابط لتسجيل دخول."
 
 #: packages/admin/src/components/FieldEditor.tsx:200
-#: packages/admin/src/components/PortableTextEditor.tsx:1413
+#: packages/admin/src/components/PortableTextEditor.tsx:1417
 msgid "Image"
 msgstr "صورة"
 
@@ -2428,7 +2428,7 @@ msgstr "استيراد عنوان الموقع والشعار الكتابي"
 msgid "Import via EmDash Exporter"
 msgstr "الاستيراد عبر EmDash Exporter"
 
-#: packages/admin/src/components/Sections.tsx:243
+#: packages/admin/src/components/Sections.tsx:244
 msgid "Imported"
 msgstr "مستورد"
 
@@ -2469,11 +2469,11 @@ msgstr "إدراج كتلة كود"
 msgid "Insert a horizontal rule"
 msgstr "إدراج فاصل أفقي"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1428
+#: packages/admin/src/components/PortableTextEditor.tsx:1432
 msgid "Insert a reusable section"
 msgstr "إدراج قسم قابل لإعادة الاستخدام"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1414
+#: packages/admin/src/components/PortableTextEditor.tsx:1418
 msgid "Insert an image"
 msgstr "إدراج صورة"
 
@@ -2650,6 +2650,11 @@ msgstr "انتهت صلاحية الرابط"
 msgid "Link to another content item"
 msgstr "الربط مع عنصر محتوى آخر"
 
+#: packages/admin/src/components/PortableTextEditor.tsx:1867
+#: packages/admin/src/components/PortableTextEditor.tsx:2272
+msgid "Link URL"
+msgstr ""
+
 #. placeholder {0}: user.oauthAccounts.length
 #: packages/admin/src/components/users/UserDetail.tsx:276
 msgid "Linked Accounts ({0})"
@@ -2710,8 +2715,8 @@ msgstr "جاري تحميل الإضافات..."
 msgid "Loading redirects..."
 msgstr "جاري تحميل إعادات التوجيه..."
 
-#: packages/admin/src/components/SectionPickerModal.tsx:94
-#: packages/admin/src/components/Sections.tsx:250
+#: packages/admin/src/components/SectionPickerModal.tsx:95
+#: packages/admin/src/components/Sections.tsx:251
 msgid "Loading sections..."
 msgstr "جاري تحميل الأقسام..."
 
@@ -2842,7 +2847,7 @@ msgstr "الحد الأقصى للطول"
 msgid "Max Value"
 msgstr "القيمة القصوى"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1417
+#: packages/admin/src/components/PortableTextEditor.tsx:1421
 #: packages/admin/src/components/Sidebar.tsx:185
 #: packages/admin/src/components/WordPressImport.tsx:1164
 msgid "Media"
@@ -3256,7 +3261,7 @@ msgstr "لم يتم تهيئة إضافات"
 msgid "No plugins found"
 msgstr "لم يتم العثور على إضافات"
 
-#: packages/admin/src/components/Sections.tsx:341
+#: packages/admin/src/components/Sections.tsx:342
 msgid "No preview"
 msgstr "لا يوجد معاينة"
 
@@ -3289,16 +3294,16 @@ msgstr "لم يتم العثور على نتائج"
 msgid "No revisions yet"
 msgstr "لا توجد مراجعات بعد"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:107
+#: packages/admin/src/components/SectionPickerModal.tsx:108
 msgid "No sections available"
 msgstr "لا توجد أقسام متاحة"
 
-#: packages/admin/src/components/SectionPickerModal.tsx:101
-#: packages/admin/src/components/Sections.tsx:257
+#: packages/admin/src/components/SectionPickerModal.tsx:102
+#: packages/admin/src/components/Sections.tsx:258
 msgid "No sections found"
 msgstr "لم يتم العثور على أقسام"
 
-#: packages/admin/src/components/Sections.tsx:263
+#: packages/admin/src/components/Sections.tsx:264
 msgid "No sections yet"
 msgstr "لا توجد أقسام بعد"
 
@@ -4187,6 +4192,11 @@ msgstr "البحث في الصفحات والمحتوى..."
 msgid "Search plugins..."
 msgstr "البحث في الإضافات..."
 
+#: packages/admin/src/components/SectionPickerModal.tsx:82
+#: packages/admin/src/components/Sections.tsx:225
+msgid "Search sections"
+msgstr ""
+
 #: packages/admin/src/components/SectionPickerModal.tsx:81
 #: packages/admin/src/components/Sections.tsx:224
 msgid "Search sections..."
@@ -4209,7 +4219,7 @@ msgstr "بحث..."
 msgid "Searchable"
 msgstr "قابل للبحث"
 
-#: packages/admin/src/components/PortableTextEditor.tsx:1427
+#: packages/admin/src/components/PortableTextEditor.tsx:1431
 msgid "Section"
 msgstr "قسم"
 
@@ -4771,7 +4781,7 @@ msgstr "الرابط العام لموقعك (يُستخدم للروابط ال
 msgid "The theme marketplace is empty. Check back later."
 msgstr "سوق المظاهر فارغ. تحقق لاحقًا."
 
-#: packages/admin/src/components/Sections.tsx:241
+#: packages/admin/src/components/Sections.tsx:242
 msgid "Theme"
 msgstr "المظهر"
 
@@ -4788,7 +4798,7 @@ msgstr "لم يتم العثور على المظهر"
 msgid "Theme Section"
 msgstr "قسم مظهر"
 
-#: packages/admin/src/components/Sections.tsx:298
+#: packages/admin/src/components/Sections.tsx:299
 msgid "Theme-provided sections cannot be deleted. Edit the section to create a custom copy, then delete that."
 msgstr "لا يمكن حذف الأقسام المزودة من مظهر. قم بتعديل القسم لإنشاء نسخة مخصصة، ثم احذفها."
 
@@ -4855,7 +4865,7 @@ msgid "This will permanently delete \"{0}\" and remove it from all content."
 msgstr "سيؤدي هذا إلى حذف \"{0}\" نهائيًا وإزالته من جميع المحتوى."
 
 #. placeholder {0}: sectionToDelete?.title
-#: packages/admin/src/components/Sections.tsx:302
+#: packages/admin/src/components/Sections.tsx:303
 msgid "This will permanently delete \"{0}\". This action cannot be undone."
 msgstr "سيؤدي هذا إلى حذف \"{0}\" نهائيًا. لا يمكن التراجع عن هذا الإجراء."
 
@@ -4971,11 +4981,11 @@ msgid "Try a different search term"
 msgstr "جرّب مصطلح بحث مختلف"
 
 #: packages/admin/src/components/ContentPickerModal.tsx:177
-#: packages/admin/src/components/SectionPickerModal.tsx:102
+#: packages/admin/src/components/SectionPickerModal.tsx:103
 msgid "Try adjusting your search"
 msgstr "جرّب تعديل بحثك"
 
-#: packages/admin/src/components/Sections.tsx:258
+#: packages/admin/src/components/Sections.tsx:259
 msgid "Try adjusting your search or filters."
 msgstr "جرّب تعديل بحثك أو عوامل التصفية."
 

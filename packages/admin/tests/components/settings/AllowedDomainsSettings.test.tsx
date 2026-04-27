@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { userEvent } from "@vitest/browser/context";
+import { userEvent } from "vitest/browser";
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 

@@ -1068,6 +1068,7 @@ function PluginBlockModal({
 								ref={inputRef}
 								type="url"
 								placeholder={block?.placeholder || "Enter URL..."}
+								aria-label={block?.placeholder || "URL"}
 								value={typeof formValues.id === "string" ? formValues.id : ""}
 								onChange={(e) => handleFieldChange("id", e.target.value)}
 							/>
@@ -1114,6 +1115,7 @@ function BlockKitField({
 						<Tag
 							className="flex w-full rounded-md border border-kumo-line bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-kumo-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring focus-visible:ring-offset-2 min-h-[80px]"
 							placeholder={placeholder}
+							aria-label={field.label}
 							value={typeof value === "string" ? value : ""}
 							onChange={(e) => onChange(field.action_id, e.target.value)}
 						/>
@@ -1121,6 +1123,7 @@ function BlockKitField({
 						<Input
 							type="text"
 							placeholder={placeholder}
+							aria-label={field.label}
 							value={typeof value === "string" ? value : ""}
 							onChange={(e) => onChange(field.action_id, e.target.value)}
 						/>
@@ -1138,6 +1141,7 @@ function BlockKitField({
 						type="number"
 						min={min}
 						max={max}
+						aria-label={field.label}
 						value={typeof value === "number" ? String(value) : ""}
 						onChange={(e) =>
 							onChange(field.action_id, e.target.value ? Number(e.target.value) : undefined)
@@ -1801,6 +1805,7 @@ export function PortableTextEditor({
  * Shows inline formatting options and link editing
  */
 function EditorBubbleMenu({ editor }: { editor: Editor }) {
+	const { t } = useLingui();
 	const [showLinkInput, setShowLinkInput] = React.useState(false);
 	const [linkUrl, setLinkUrl] = React.useState("");
 	const inputRef = React.useRef<HTMLInputElement>(null);
@@ -1859,6 +1864,7 @@ function EditorBubbleMenu({ editor }: { editor: Editor }) {
 						ref={inputRef}
 						type="url"
 						placeholder="https://..."
+						aria-label={t`Link URL`}
 						value={linkUrl}
 						onChange={(e) => setLinkUrl(e.target.value)}
 						onKeyDown={handleKeyDown}
@@ -1981,6 +1987,7 @@ function EditorToolbar({
 	focusMode: FocusMode;
 	onFocusModeChange: (mode: FocusMode) => void;
 }) {
+	const { t } = useLingui();
 	const [mediaPickerOpen, setMediaPickerOpen] = React.useState(false);
 	const [showLinkPopover, setShowLinkPopover] = React.useState(false);
 	const [linkUrl, setLinkUrl] = React.useState("");
@@ -2262,6 +2269,7 @@ function EditorToolbar({
 										ref={linkInputRef}
 										type="url"
 										placeholder="https://..."
+										aria-label={t`Link URL`}
 										value={linkUrl}
 										onChange={(e) => setLinkUrl(e.target.value)}
 										onKeyDown={handleLinkKeyDown}
