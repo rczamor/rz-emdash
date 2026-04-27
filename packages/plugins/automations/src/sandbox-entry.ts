@@ -15,6 +15,8 @@ import type { PluginContext } from "emdash";
 import { dispatchEvent, reconcileCron } from "./engine.js";
 import type { Routine } from "./types.js";
 
+const ROUTINE_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
 interface RouteCtx {
 	input: unknown;
 	request: Request;
@@ -25,7 +27,7 @@ function getQueryParam(routeCtx: RouteCtx, key: string): string | undefined {
 }
 
 function isValidId(id: unknown): id is string {
-	return typeof id === "string" && /^[a-z0-9][a-z0-9-]{0,63}$/.test(id);
+	return typeof id === "string" && ROUTINE_ID_RE.test(id);
 }
 
 /** Storage tag used as the `triggerOn` index for routine lookup. */
@@ -41,11 +43,11 @@ async function saveRoutine(routine: Routine, ctx: PluginContext): Promise<void> 
 	// Storage indexes only see top-level fields. We embed the trigger source
 	// at the top of the storage record so the index sees it.
 	const record = { ...routine, triggerOn: triggerKey(routine) } as unknown as Routine;
-	await ctx.storage.routines.put(routine.id, record);
+	await ctx.storage.routines!.put(routine.id, record);
 }
 
 async function buildAdminPage(ctx: PluginContext) {
-	const result = await ctx.storage.routines.query({
+	const result = await ctx.storage.routines!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 200,
 	});
@@ -69,7 +71,8 @@ async function buildAdminPage(ctx: PluginContext) {
 			type: "banner",
 			variant: "default",
 			title: "No routines yet",
-			description: "Ask an agent to create one via /_emdash/api/plugins/automations/routines.upsert.",
+			description:
+				"Ask an agent to create one via /_emdash/api/plugins/automations/routines.upsert.",
 		});
 	} else {
 		blocks.push({
@@ -126,14 +129,14 @@ async function buildAdminPage(ctx: PluginContext) {
 }
 
 async function buildRecentWidget(ctx: PluginContext) {
-	const result = await ctx.storage.routines.query({
+	const result = await ctx.storage.routines!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 5,
 	});
 	const recent = result.items
 		.map((i) => i.data as Routine)
 		.filter((r) => r.stats?.lastRunAt)
-		.sort((a, b) => (b.stats!.lastRunAt ?? "").localeCompare(a.stats!.lastRunAt ?? ""))
+		.toSorted((a, b) => (b.stats!.lastRunAt ?? "").localeCompare(a.stats!.lastRunAt ?? ""))
 		.slice(0, 5);
 	return {
 		blocks: [
@@ -158,23 +161,29 @@ async function buildRecentWidget(ctx: PluginContext) {
 
 const NOW = () => new Date().toISOString();
 
+function dispatchHook(source: string) {
+	return async (event: unknown, ctx: PluginContext) => {
+		await dispatchEvent(source, event as Record<string, unknown>, ctx);
+	};
+}
+
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				ctx.log.info("Automations plugin installed");
 			},
 		},
 		"plugin:activate": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				await reconcileCron(ctx);
 			},
 		},
 
 		// Cron handler — fires for every scheduled routine.
 		cron: {
-			handler: async (event, ctx: PluginContext) => {
-				const routine = (await ctx.storage.routines.get(event.name)) as Routine | null;
+			handler: async (event: { name: string; scheduledAt?: string }, ctx: PluginContext) => {
+				const routine = (await ctx.storage.routines!.get(event.name)) as Routine | null;
 				if (!routine || !routine.enabled || routine.trigger.on !== "cron") return;
 				await dispatchEvent("cron", { name: event.name, scheduledAt: event.scheduledAt }, ctx);
 			},
@@ -182,100 +191,52 @@ export default definePlugin({
 
 		// Content lifecycle hooks
 		"content:beforeSave": {
-			handler: async (event, ctx) => {
-				await dispatchEvent("content:beforeSave", event as unknown as Record<string, unknown>, ctx);
-			},
+			handler: dispatchHook("content:beforeSave"),
 		},
 		"content:afterSave": {
-			handler: async (event, ctx) => {
-				await dispatchEvent("content:afterSave", event as unknown as Record<string, unknown>, ctx);
-			},
+			handler: dispatchHook("content:afterSave"),
 		},
 		"content:beforeDelete": {
-			handler: async (event, ctx) => {
-				await dispatchEvent(
-					"content:beforeDelete",
-					event as unknown as Record<string, unknown>,
-					ctx,
-				);
-			},
+			handler: dispatchHook("content:beforeDelete"),
 		},
 		"content:afterDelete": {
-			handler: async (event, ctx) => {
-				await dispatchEvent("content:afterDelete", event as unknown as Record<string, unknown>, ctx);
-			},
+			handler: dispatchHook("content:afterDelete"),
 		},
 		"content:afterPublish": {
-			handler: async (event, ctx) => {
-				await dispatchEvent(
-					"content:afterPublish",
-					event as unknown as Record<string, unknown>,
-					ctx,
-				);
-			},
+			handler: dispatchHook("content:afterPublish"),
 		},
 		"content:afterUnpublish": {
-			handler: async (event, ctx) => {
-				await dispatchEvent(
-					"content:afterUnpublish",
-					event as unknown as Record<string, unknown>,
-					ctx,
-				);
-			},
+			handler: dispatchHook("content:afterUnpublish"),
 		},
 
 		// Media hooks
 		"media:beforeUpload": {
-			handler: async (event, ctx) => {
-				await dispatchEvent("media:beforeUpload", event as unknown as Record<string, unknown>, ctx);
-			},
+			handler: dispatchHook("media:beforeUpload"),
 		},
 		"media:afterUpload": {
-			handler: async (event, ctx) => {
-				await dispatchEvent("media:afterUpload", event as unknown as Record<string, unknown>, ctx);
-			},
+			handler: dispatchHook("media:afterUpload"),
 		},
 
 		// Comment hooks
 		"comment:beforeCreate": {
-			handler: async (event, ctx) => {
-				await dispatchEvent(
-					"comment:beforeCreate",
-					event as unknown as Record<string, unknown>,
-					ctx,
-				);
-			},
+			handler: dispatchHook("comment:beforeCreate"),
 		},
 		"comment:afterCreate": {
-			handler: async (event, ctx) => {
-				await dispatchEvent(
-					"comment:afterCreate",
-					event as unknown as Record<string, unknown>,
-					ctx,
-				);
-			},
+			handler: dispatchHook("comment:afterCreate"),
 		},
 		"comment:afterModerate": {
-			handler: async (event, ctx) => {
-				await dispatchEvent(
-					"comment:afterModerate",
-					event as unknown as Record<string, unknown>,
-					ctx,
-				);
-			},
+			handler: dispatchHook("comment:afterModerate"),
 		},
 
 		"email:afterSend": {
-			handler: async (event, ctx) => {
-				await dispatchEvent("email:afterSend", event as unknown as Record<string, unknown>, ctx);
-			},
+			handler: dispatchHook("email:afterSend"),
 		},
 	},
 
 	routes: {
 		"routines.list": {
 			handler: async (_routeCtx: RouteCtx, ctx: PluginContext) => {
-				const result = await ctx.storage.routines.query({
+				const result = await ctx.storage.routines!.query({
 					orderBy: { createdAt: "desc" },
 					limit: 500,
 				});
@@ -287,7 +248,7 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const id = getQueryParam(routeCtx, "id");
 				if (!isValidId(id)) return { ok: false, error: "Missing or invalid id" };
-				const r = await ctx.storage.routines.get(id);
+				const r = await ctx.storage.routines!.get(id);
 				if (!r) return { ok: false, error: "Not found" };
 				return { ok: true, routine: r };
 			},
@@ -306,7 +267,7 @@ export default definePlugin({
 					return { ok: false, error: "Cron trigger requires a schedule" };
 				}
 
-				const existing = (await ctx.storage.routines.get(body.id)) as Routine | null;
+				const existing = (await ctx.storage.routines!.get(body.id)) as Routine | null;
 				const routine: Routine = {
 					id: body.id,
 					name: body.name,
@@ -329,8 +290,8 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const body = routeCtx.input as { id?: unknown } | null;
 				if (!body || !isValidId(body.id)) return { ok: false, error: "Invalid id" };
-				const existing = (await ctx.storage.routines.get(body.id)) as Routine | null;
-				const removed = await ctx.storage.routines.delete(body.id);
+				const existing = (await ctx.storage.routines!.get(body.id)) as Routine | null;
+				const removed = await ctx.storage.routines!.delete(body.id);
 				if (existing?.trigger.on === "cron" && ctx.cron) {
 					try {
 						await ctx.cron.cancel(body.id);
@@ -346,7 +307,7 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const body = routeCtx.input as { id?: unknown; event?: Record<string, unknown> } | null;
 				if (!body || !isValidId(body.id)) return { ok: false, error: "Invalid id" };
-				const routine = (await ctx.storage.routines.get(body.id)) as Routine | null;
+				const routine = (await ctx.storage.routines!.get(body.id)) as Routine | null;
 				if (!routine) return { ok: false, error: "Not found" };
 				const { executeRoutine } = await import("./engine.js");
 				const event = body.event ?? {};
@@ -382,7 +343,7 @@ export default definePlugin({
 					interaction.action_id === "toggle_routine" &&
 					isValidId(interaction.value)
 				) {
-					const r = (await ctx.storage.routines.get(interaction.value)) as Routine | null;
+					const r = (await ctx.storage.routines!.get(interaction.value)) as Routine | null;
 					if (!r) {
 						return {
 							...(await buildAdminPage(ctx)),
@@ -408,7 +369,7 @@ export default definePlugin({
 					interaction.action_id === "test_routine" &&
 					isValidId(interaction.value)
 				) {
-					const r = (await ctx.storage.routines.get(interaction.value)) as Routine | null;
+					const r = (await ctx.storage.routines!.get(interaction.value)) as Routine | null;
 					if (!r) {
 						return {
 							...(await buildAdminPage(ctx)),

@@ -13,6 +13,10 @@
 import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
 
+import { isAuditEntry, isRecord, type AuditEntry } from "./guards.js";
+
+export { isAuditEntry, isRecord, type AuditEntry };
+
 interface ContentSaveEvent {
 	content: Record<string, unknown> & {
 		id?: string | number;
@@ -31,36 +35,6 @@ interface ContentDeleteEvent {
 
 interface MediaUploadEvent {
 	media: { id: string };
-}
-
-interface AuditEntry {
-	timestamp: string;
-	action: "create" | "update" | "delete" | "media:upload" | "media:delete";
-	collection?: string;
-	resourceId: string;
-	resourceType: "content" | "media";
-	userId?: string;
-	changes?: {
-		before?: Record<string, unknown>;
-		after?: Record<string, unknown>;
-	};
-	metadata?: Record<string, unknown>;
-}
-
-// ── Helpers ──
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isAuditEntry(value: unknown): value is AuditEntry {
-	return (
-		isRecord(value) &&
-		typeof value.timestamp === "string" &&
-		typeof value.action === "string" &&
-		typeof value.resourceId === "string" &&
-		typeof value.resourceType === "string"
-	);
 }
 
 // In-memory cache for content state before save/delete.

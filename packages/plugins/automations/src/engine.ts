@@ -11,12 +11,9 @@ import type { Routine } from "./types.js";
 export const ROUTINE_INDEX_KEY = "routines:index";
 
 /** Look up routines that fire on a given trigger source. */
-export async function findRoutinesFor(
-	source: string,
-	ctx: PluginContext,
-): Promise<Routine[]> {
-	const result = await ctx.storage.routines.query({
-		filter: { triggerOn: source },
+export async function findRoutinesFor(source: string, ctx: PluginContext): Promise<Routine[]> {
+	const result = await ctx.storage.routines!.query({
+		where: { triggerOn: source },
 		limit: 1000,
 	});
 	const out: Routine[] = [];
@@ -68,7 +65,7 @@ export async function executeRoutine(
 		},
 	};
 	try {
-		await ctx.storage.routines.put(routine.id, updated);
+		await ctx.storage.routines!.put(routine.id, updated);
 	} catch {
 		// Stats writes are best effort.
 	}
@@ -98,8 +95,8 @@ export async function dispatchEvent(
 /** Reconcile cron schedules with the registered routines. */
 export async function reconcileCron(ctx: PluginContext): Promise<void> {
 	if (!ctx.cron) return;
-	const result = await ctx.storage.routines.query({
-		filter: { triggerOn: "cron" },
+	const result = await ctx.storage.routines!.query({
+		where: { triggerOn: "cron" },
 		limit: 1000,
 	});
 	const wanted = new Map<string, string>();

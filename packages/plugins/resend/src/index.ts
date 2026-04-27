@@ -50,9 +50,7 @@ export function createPlugin(options: ResendPluginOptions = {}): ResolvedPlugin 
 				exclusive: true,
 				handler: async (event, ctx) => {
 					if (!apiKey) {
-						throw new Error(
-							"[resend] RESEND_API_KEY is not set — refusing to deliver email",
-						);
+						throw new Error("[resend] RESEND_API_KEY is not set — refusing to deliver email");
 					}
 
 					const { message, source } = event;
@@ -82,9 +80,7 @@ export function createPlugin(options: ResendPluginOptions = {}): ResolvedPlugin 
 							to: message.to,
 							body: errText.slice(0, 500),
 						});
-						throw new Error(
-							`Resend API ${response.status}: ${errText.slice(0, 200)}`,
-						);
+						throw new Error(`Resend API ${response.status}: ${errText.slice(0, 200)}`);
 					}
 
 					ctx.log.info("Email delivered via Resend", {

@@ -15,17 +15,13 @@
 
 import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
-import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
 
-interface PathautoPattern {
-	collection: string;
-	pattern: string;
-	maxLength?: number;
-	lowercase?: boolean;
-	onUpdate?: "regenerate" | "preserve";
-}
-
-const DEFAULT_MAX_LENGTH = 100;
+import {
+	applyPatternPure,
+	DEFAULT_MAX_LENGTH,
+	isValidCollectionName,
+	type PathautoPattern,
+} from "./pure.js";
 
 interface RouteCtx {
 	input: unknown;
@@ -36,40 +32,13 @@ function getQueryParam(routeCtx: RouteCtx, key: string): string | undefined {
 	return new URL(routeCtx.request.url).searchParams.get(key) ?? undefined;
 }
 
-function isValidCollectionName(name: unknown): name is string {
-	return typeof name === "string" && /^[a-z0-9][a-z0-9_-]{0,63}$/.test(name);
-}
-
-function trimSlug(slug: string, maxLength: number): string {
-	if (slug.length <= maxLength) return slug;
-	const cut = slug.slice(0, maxLength);
-	const lastSep = Math.max(cut.lastIndexOf("/"), cut.lastIndexOf("-"));
-	return lastSep > maxLength * 0.7 ? cut.slice(0, lastSep) : cut;
-}
-
 async function applyPattern(
 	pattern: PathautoPattern,
 	content: Record<string, unknown>,
 	ctx: PluginContext,
 ): Promise<string | null> {
 	try {
-		const raw = await resolveTokens(pattern.pattern, { content });
-		if (!raw) return null;
-		// Resolve segment by segment so each piece gets slug-formatted; preserve
-		// the path separators between them.
-		const segments = raw.split("/").map((s) => s.trim()).filter(Boolean);
-		const slugParts = segments.map((s) =>
-			s
-				.normalize("NFKD")
-				.replace(/[̀-ͯ]/g, "")
-				.replace(/[^A-Za-z0-9]+/g, "-")
-				.replace(/^-+|-+$/g, ""),
-		);
-		let slug = slugParts.filter(Boolean).join("/");
-		if (pattern.lowercase !== false) slug = slug.toLowerCase();
-		const max = pattern.maxLength ?? DEFAULT_MAX_LENGTH;
-		slug = trimSlug(slug, max);
-		return slug || null;
+		return await applyPatternPure(pattern, content);
 	} catch (err) {
 		ctx.log.error("Pathauto: failed to resolve pattern", {
 			collection: pattern.collection,
@@ -81,7 +50,7 @@ async function applyPattern(
 }
 
 async function buildAdminPage(ctx: PluginContext) {
-	const result = await ctx.storage.patterns.query({
+	const result = await ctx.storage.patterns!.query({
 		orderBy: { collection: "asc" },
 		limit: 200,
 	});
@@ -123,10 +92,13 @@ async function buildAdminPage(ctx: PluginContext) {
 export default definePlugin({
 	hooks: {
 		"content:beforeSave": {
-			handler: async (event, ctx: PluginContext) => {
-				const pattern = (await ctx.storage.patterns.get(event.collection)) as
-					| PathautoPattern
-					| null;
+			handler: async (
+				event: { collection: string; content: Record<string, unknown> },
+				ctx: PluginContext,
+			) => {
+				const pattern = (await ctx.storage.patterns!.get(
+					event.collection,
+				)) as PathautoPattern | null;
 				if (!pattern) return;
 
 				const onUpdate = pattern.onUpdate ?? "regenerate";
@@ -146,7 +118,7 @@ export default definePlugin({
 	routes: {
 		"patterns.list": {
 			handler: async (_routeCtx: RouteCtx, ctx: PluginContext) => {
-				const result = await ctx.storage.patterns.query({
+				const result = await ctx.storage.patterns!.query({
 					orderBy: { collection: "asc" },
 					limit: 500,
 				});
@@ -160,7 +132,7 @@ export default definePlugin({
 				if (!isValidCollectionName(collection)) {
 					return { ok: false, error: "Missing or invalid collection" };
 				}
-				const pattern = await ctx.storage.patterns.get(collection);
+				const pattern = await ctx.storage.patterns!.get(collection);
 				if (!pattern) return { ok: false, error: "No pattern for this collection" };
 				return { ok: true, pattern };
 			},
@@ -182,7 +154,7 @@ export default definePlugin({
 					lowercase: body.lowercase,
 					onUpdate: body.onUpdate ?? "regenerate",
 				};
-				await ctx.storage.patterns.put(pattern.collection, pattern);
+				await ctx.storage.patterns!.put(pattern.collection, pattern);
 				return { ok: true, pattern };
 			},
 		},
@@ -193,7 +165,7 @@ export default definePlugin({
 				if (!body || !isValidCollectionName(body.collection)) {
 					return { ok: false, error: "Invalid collection" };
 				}
-				const removed = await ctx.storage.patterns.delete(body.collection);
+				const removed = await ctx.storage.patterns!.delete(body.collection);
 				return { ok: true, removed };
 			},
 		},
@@ -204,17 +176,16 @@ export default definePlugin({
 				if (!body || !isValidCollectionName(body.collection)) {
 					return { ok: false, error: "Invalid collection" };
 				}
-				const pattern = (await ctx.storage.patterns.get(body.collection)) as
-					| PathautoPattern
-					| null;
+				const pattern = (await ctx.storage.patterns!.get(
+					body.collection,
+				)) as PathautoPattern | null;
 				if (!pattern) return { ok: false, error: "No pattern set for this collection" };
 				if (!ctx.content) return { ok: false, error: "Content access unavailable" };
 
 				let updated = 0;
 				let cursor: string | undefined;
 				do {
-					const page = await ctx.content.list({
-						collection: body.collection,
+					const page = await ctx.content.list(body.collection, {
 						limit: 100,
 						cursor,
 					});
@@ -226,7 +197,7 @@ export default definePlugin({
 						);
 						if (!slug || slug === (item as { slug?: string }).slug) continue;
 						try {
-							await ctx.content.update(body.collection, (item as { id: string }).id, { slug });
+							await ctx.content.update!(body.collection, (item as { id: string }).id, { slug });
 							updated++;
 						} catch (err) {
 							ctx.log.warn("Pathauto regenerate: skipped item", {

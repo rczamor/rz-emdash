@@ -16,10 +16,9 @@ import type {
 	UnpublishJobPayload,
 } from "./types.js";
 
-async function runPublish(
-	payload: PublishJobPayload,
-	ctx: PluginContext,
-): Promise<void> {
+const TRAILING_SLASH_RE = /\/$/;
+
+async function runPublish(payload: PublishJobPayload, ctx: PluginContext): Promise<void> {
 	if (!ctx.content) throw new Error("read:content + write:content capabilities required");
 	const item = await ctx.content.get(payload.collection, payload.contentId);
 	if (!item) throw new Error(`Content ${payload.collection}/${payload.contentId} not found`);
@@ -28,13 +27,10 @@ async function runPublish(
 		ctx.log.info("Scheduler: publish skipped, already published", payload);
 		return;
 	}
-	await ctx.content.update(payload.collection, payload.contentId, { status: "published" });
+	await ctx.content.update!(payload.collection, payload.contentId, { status: "published" });
 }
 
-async function runUnpublish(
-	payload: UnpublishJobPayload,
-	ctx: PluginContext,
-): Promise<void> {
+async function runUnpublish(payload: UnpublishJobPayload, ctx: PluginContext): Promise<void> {
 	if (!ctx.content) throw new Error("read:content + write:content capabilities required");
 	const item = await ctx.content.get(payload.collection, payload.contentId);
 	if (!item) throw new Error(`Content ${payload.collection}/${payload.contentId} not found`);
@@ -43,22 +39,18 @@ async function runUnpublish(
 		ctx.log.info("Scheduler: unpublish skipped, not currently published", payload);
 		return;
 	}
-	await ctx.content.update(payload.collection, payload.contentId, { status: "draft" });
+	await ctx.content.update!(payload.collection, payload.contentId, { status: "draft" });
 }
 
-async function runAutomation(
-	payload: AutomationJobPayload,
-	ctx: PluginContext,
-): Promise<void> {
+async function runAutomation(payload: AutomationJobPayload, ctx: PluginContext): Promise<void> {
 	// We don't import the automations engine directly to avoid a hard
 	// cross-plugin dependency. Instead we POST to the automations
 	// routines.test endpoint. The scheduler plugin already declares
 	// network:fetch.
 	if (!ctx.http) throw new Error("network:fetch capability required for automation jobs");
-	const baseUrl =
-		(ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321";
+	const baseUrl = (ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321";
 	const res = await ctx.http.fetch(
-		`${baseUrl.replace(/\/$/, "")}/_emdash/api/plugins/automations/routines.test`,
+		`${baseUrl.replace(TRAILING_SLASH_RE, "")}/_emdash/api/plugins/automations/routines.test`,
 		{
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -70,10 +62,7 @@ async function runAutomation(
 	}
 }
 
-async function runCustom(
-	payload: CustomJobPayload,
-	ctx: PluginContext,
-): Promise<void> {
+async function runCustom(payload: CustomJobPayload, ctx: PluginContext): Promise<void> {
 	const handler = getJobHandler(payload.handler);
 	if (!handler) throw new Error(`Unknown custom handler: ${payload.handler}`);
 	await handler(payload.data, ctx);

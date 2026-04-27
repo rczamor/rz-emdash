@@ -47,12 +47,7 @@ export class DesignWatcher {
 		const env = process.env.DESIGN_MD_PATH;
 		const cwd = process.cwd();
 		const list = env ? [env] : [];
-		list.push(
-			join(cwd, "DESIGN.md"),
-			join(cwd, "design.md"),
-			"/app/DESIGN.md",
-			"/app/design.md",
-		);
+		list.push(join(cwd, "DESIGN.md"), join(cwd, "design.md"), "/app/DESIGN.md", "/app/design.md");
 		return list;
 	}
 

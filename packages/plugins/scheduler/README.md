@@ -17,11 +17,11 @@ One-shot scheduled jobs for EmDash. Fills three gaps in core:
 import { schedulerPlugin } from "@emdash-cms/plugin-scheduler";
 
 export default defineConfig({
-  integrations: [
-    emdash({
-      plugins: [schedulerPlugin()],
-    }),
-  ],
+	integrations: [
+		emdash({
+			plugins: [schedulerPlugin()],
+		}),
+	],
 });
 ```
 
@@ -79,16 +79,16 @@ Calls a handler registered via `@emdash-cms/plugin-scheduler/registry`.
 import { registerJobHandler } from "@emdash-cms/plugin-scheduler/registry";
 
 registerJobHandler("audit:purge-old", async (data, ctx) => {
-  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  // ... query your storage and delete entries older than cutoff ...
+	const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+	// ... query your storage and delete entries older than cutoff ...
 });
 ```
 
 ```json
 {
-  "type": "custom",
-  "payload": { "type": "custom", "payload": { "handler": "audit:purge-old" } },
-  "runAt": "2026-05-01T03:00:00Z"
+	"type": "custom",
+	"payload": { "type": "custom", "payload": { "handler": "audit:purge-old" } },
+	"runAt": "2026-05-01T03:00:00Z"
 }
 ```
 
@@ -96,10 +96,10 @@ registerJobHandler("audit:purge-old", async (data, ctx) => {
 
 The plugin watches `content:afterSave` for two field conventions:
 
-| Source field   | Action |
-|----------------|--------|
+| Source field                      | Action                                                                       |
+| --------------------------------- | ---------------------------------------------------------------------------- |
 | `scheduled_at` (or `scheduledAt`) | Schedules a `publish` job at that time, if status is not already "published" |
-| `unpublish_at` (or `unpublishAt`) | Schedules an `unpublish` job at that time |
+| `unpublish_at` (or `unpublishAt`) | Schedules an `unpublish` job at that time                                    |
 
 Existing pending jobs sourced from the same content item are canceled
 first, so editing the schedule on a content item does what you'd

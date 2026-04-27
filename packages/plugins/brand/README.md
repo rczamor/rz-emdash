@@ -11,9 +11,7 @@ management. Distinct from DESIGN.md (visual identity) and skills
 import { brandPlugin } from "@emdash-cms/plugin-brand";
 
 export default defineConfig({
-  integrations: [
-    emdash({ plugins: [brandPlugin()] }),
-  ],
+	integrations: [emdash({ plugins: [brandPlugin()] })],
 });
 ```
 
@@ -21,17 +19,17 @@ export default defineConfig({
 
 ```ts
 interface Brand {
-  id: string;
-  locale?: string;             // optional; "en", "fr", etc.
-  name: string;
-  positioning: string;         // who you are, in your own words
-  voice_attributes: VoiceAttribute[];
-  tone_rules: ToneRule[];      // when to be more/less formal, technical, etc.
-  vocabulary: VocabEntry[];    // preferred terms + alternates to avoid
-  banned_phrases: string[];    // hard-no list
-  examples: PhraseExample[];   // good/bad pairs with rationale
-  notes?: string;
-  active: boolean;
+	id: string;
+	locale?: string; // optional; "en", "fr", etc.
+	name: string;
+	positioning: string; // who you are, in your own words
+	voice_attributes: VoiceAttribute[];
+	tone_rules: ToneRule[]; // when to be more/less formal, technical, etc.
+	vocabulary: VocabEntry[]; // preferred terms + alternates to avoid
+	banned_phrases: string[]; // hard-no list
+	examples: PhraseExample[]; // good/bad pairs with rationale
+	notes?: string;
+	active: boolean;
 }
 ```
 
@@ -86,10 +84,7 @@ curl -X POST http://localhost:4321/_emdash/api/plugins/brand/brands.create \
 ## Prompt injection (the killer feature)
 
 ```ts
-import {
-  getActiveBrand,
-  assembleBrandSystemBlock,
-} from "@emdash-cms/plugin-brand/client";
+import { getActiveBrand, assembleBrandSystemBlock } from "@emdash-cms/plugin-brand/client";
 
 // Inside an OpenRouter / Agents callsite
 const brand = await getActiveBrand({ locale: "en" });
@@ -101,30 +96,37 @@ const systemPrompt = `${agentSystemPrompt}\n\n${brandBlock}`;
 
 ```markdown
 # Brand: EmDash voice
+
 _Locale: en_
 
 ## Positioning
+
 We build infra for builders. Plain language, no theatre.
 
 ## Voice attributes
+
 - **Direct** _(8/10)_
 - **Sardonic but kind** _(6/10)_
 - **Specific** _(9/10)_ — Concrete examples over abstractions
 
 ## Tone rules
+
 - _Error messages_: State what went wrong, what to do, no apology theatre
 - _Marketing copy_: Lead with the work, not the company
 
 ## Vocabulary
+
 - Use **"ship"** (avoid: deliver, deploy) — Action over process
 - Use **"engineer"** (avoid: resource, developer rockstar)
 
 ## Never use
+
 - "best in class"
 - "synergy"
 - "moving forward"
 
 ## Examples
+
 - Good: "Shipped: persistent agent memory." · Bad: "We are excited to announce…" — Verb-first, factual
 ```
 

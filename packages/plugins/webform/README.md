@@ -12,11 +12,11 @@ import { tokensPlugin } from "@emdash-cms/plugin-tokens";
 import { webformPlugin } from "@emdash-cms/plugin-webform";
 
 export default defineConfig({
-  integrations: [
-    emdash({
-      plugins: [tokensPlugin(), webformPlugin()],
-    }),
-  ],
+	integrations: [
+		emdash({
+			plugins: [tokensPlugin(), webformPlugin()],
+		}),
+	],
 });
 ```
 
@@ -85,17 +85,17 @@ On validation error:
 
 ## Field types
 
-| `type`     | Notes |
-|------------|-------|
-| `text`     | Honors `minLength`, `maxLength`, `pattern` |
-| `email`    | Format-validated |
-| `textarea` | Honors length limits |
-| `number`   | Honors `min` / `max` |
-| `url`      | Must be http(s) |
-| `tel`      | Free-form (use `pattern` for stricter validation) |
-| `select`   | Requires `options: [{ value, label }]` |
-| `radio`    | Requires `options: [{ value, label }]` |
-| `checkbox` | Submitted value is truthy/falsy |
+| `type`     | Notes                                                         |
+| ---------- | ------------------------------------------------------------- |
+| `text`     | Honors `minLength`, `maxLength`, `pattern`                    |
+| `email`    | Format-validated                                              |
+| `textarea` | Honors length limits                                          |
+| `number`   | Honors `min` / `max`                                          |
+| `url`      | Must be http(s)                                               |
+| `tel`      | Free-form (use `pattern` for stricter validation)             |
+| `select`   | Requires `options: [{ value, label }]`                        |
+| `radio`    | Requires `options: [{ value, label }]`                        |
+| `checkbox` | Submitted value is truthy/falsy                               |
 | `hidden`   | Use for stable values (campaign id, etc.) — bots ignore these |
 
 The submission body can include any `data._hp` honeypot field; if non-empty
@@ -135,7 +135,7 @@ The Block Kit admin page at **Settings → Webforms** lists all forms; the
 
 ## Frontend rendering
 
-The plugin owns *data*; your site owns *rendering*. A minimal Astro
+The plugin owns _data_; your site owns _rendering_. A minimal Astro
 component:
 
 ```astro

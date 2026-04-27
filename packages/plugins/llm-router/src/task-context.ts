@@ -7,6 +7,8 @@ import type { PluginContext } from "emdash";
 
 import type { ChatCompletionInput } from "./types.js";
 
+const TRAILING_SLASH_RE = /\/$/;
+
 interface QuotaCheckResult {
 	ok: boolean;
 	reason?: string;
@@ -17,25 +19,35 @@ interface QuotaCheckResult {
 }
 
 function siteUrl(ctx: PluginContext): string {
-	return (((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321") as string).replace(/\/$/, "");
+	return ((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(
+		TRAILING_SLASH_RE,
+		"",
+	);
 }
 
 export async function checkQuota(
 	body: { actor: string; taskId?: string; estimatedTokensIn?: number; estimatedTokensOut?: number },
 	ctx: PluginContext,
 ): Promise<QuotaCheckResult> {
-	if (!ctx.http) return { ok: true };
+	if (!ctx.http) return { ok: false, reason: "Unable to verify quota" };
 	try {
 		const res = await ctx.http.fetch(`${siteUrl(ctx)}/_emdash/api/plugins/tasks/quota.check`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 		});
-		if (!res.ok) return { ok: true };
+		// 404 → tasks plugin not installed; no quota enforcement is configured.
+		// Distinct from "tasks plugin installed but failing" (5xx) or
+		// "tasks plugin returned a structured deny" (200 with ok:false).
+		if (res.status === 404) return { ok: true };
+		if (!res.ok) return { ok: false, reason: `Quota check failed with ${res.status}` };
 		const json = (await res.json()) as { data?: QuotaCheckResult };
-		return json.data ?? { ok: true };
-	} catch {
-		return { ok: true };
+		return json.data ?? { ok: false, reason: "Quota check returned no data" };
+	} catch (err) {
+		return {
+			ok: false,
+			reason: err instanceof Error ? err.message : "Quota check failed",
+		};
 	}
 }
 

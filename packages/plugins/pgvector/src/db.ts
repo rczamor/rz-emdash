@@ -26,28 +26,48 @@ import type {
 	UpsertEmbeddingInput,
 } from "./types.js";
 
-let pool: Pool | undefined;
-const knownDimensions = new Set<number>();
+const PGVECTOR_DB_STATE = Symbol.for("emdash.pluginPgvector.db");
+const EMBEDDINGS_TABLE_RE = /^pgvector_embeddings_(\d+)$/;
+
+interface PgvectorDbState {
+	pool?: Pool;
+	knownDimensions: Set<number>;
+}
+
+type PgvectorDbGlobal = typeof globalThis & {
+	[PGVECTOR_DB_STATE]?: PgvectorDbState;
+};
+
+function getDbState(): PgvectorDbState {
+	const global = globalThis as PgvectorDbGlobal;
+	global[PGVECTOR_DB_STATE] ??= { knownDimensions: new Set() };
+	return global[PGVECTOR_DB_STATE];
+}
+
+const knownDimensions = getDbState().knownDimensions;
 
 function getPool(): Pool {
-	if (!pool) {
-		pool = new Pool({
+	const state = getDbState();
+	if (!state.pool) {
+		state.pool = new Pool({
 			min: 0,
 			max: 5,
 			idleTimeoutMillis: 30_000,
 		});
 	}
-	return pool;
+	return state.pool;
 }
 
-function tableName(dim: number): string {
+/** @internal — exported for unit tests. */
+export function tableName(dim: number): string {
 	if (!Number.isInteger(dim) || dim <= 0 || dim > 16_000) {
 		throw new Error(`Invalid embedding dimension: ${dim}`);
 	}
 	return `pgvector_embeddings_${dim}`;
 }
 
-function indexType(): IndexType {
+/** @internal — exported for unit tests. */
+export function indexType(): IndexType {
 	const raw = (process.env.PGVECTOR_INDEX_TYPE ?? "hnsw").toLowerCase();
 	return raw === "ivfflat" ? "ivfflat" : "hnsw";
 }
@@ -121,11 +141,13 @@ export async function ensureSchemaForDimension(dim: number): Promise<void> {
 	}
 }
 
-function toVectorLiteral(embedding: number[]): string {
+/** @internal — exported for unit tests. */
+export function toVectorLiteral(embedding: number[]): string {
 	return `[${embedding.join(",")}]`;
 }
 
-function newId(): string {
+/** @internal — exported for unit tests. */
+export function newId(): string {
 	return `emb_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
@@ -279,7 +301,7 @@ export async function deleteEmbedding(
 	options: { model?: string; dimension?: number } = {},
 ): Promise<number> {
 	const p = getPool();
-	const dims = options.dimension ? [options.dimension] : Array.from(knownDimensions);
+	const dims = options.dimension ? [options.dimension] : [...knownDimensions];
 	let removed = 0;
 	for (const dim of dims) {
 		const t = tableName(dim);
@@ -337,7 +359,7 @@ export async function listEmbeddings(
 			/* skip */
 		}
 	}
-	return records.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit);
+	return records.toSorted((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit);
 }
 
 export async function discoverDimensions(): Promise<number[]> {
@@ -348,10 +370,10 @@ export async function discoverDimensions(): Promise<number[]> {
 		AND tablename ~ '^pgvector_embeddings_[0-9]+$'`,
 	);
 	for (const row of result.rows) {
-		const m = row.tablename.match(/^pgvector_embeddings_(\d+)$/);
+		const m = row.tablename.match(EMBEDDINGS_TABLE_RE);
 		if (m) knownDimensions.add(Number(m[1]));
 	}
-	return Array.from(knownDimensions).sort((a, b) => a - b);
+	return [...knownDimensions].toSorted((a, b) => a - b);
 }
 
 export async function totalCount(): Promise<number> {
@@ -394,9 +416,9 @@ export async function statsByCollection(): Promise<CollectionStats[]> {
 	for (const [collection, { count, byDim }] of accum) {
 		out.push({ collection, count, byDimension: byDim });
 	}
-	return out.sort((a, b) => a.collection.localeCompare(b.collection));
+	return out.toSorted((a, b) => a.collection.localeCompare(b.collection));
 }
 
 export function getKnownDimensions(): number[] {
-	return Array.from(knownDimensions).sort((a, b) => a - b);
+	return [...knownDimensions].toSorted((a, b) => a - b);
 }

@@ -7,6 +7,8 @@
 
 import type { Brand } from "./types.js";
 
+const TRAILING_SLASH_RE = /\/$/;
+
 const BASE = "/_emdash/api/plugins/brand";
 
 interface ClientOptions {
@@ -15,7 +17,7 @@ interface ClientOptions {
 }
 
 function urlFor(path: string, options: ClientOptions): string {
-	return (options.baseUrl ?? "").replace(/\/$/, "") + `${BASE}${path}`;
+	return (options.baseUrl ?? "").replace(TRAILING_SLASH_RE, "") + `${BASE}${path}`;
 }
 
 export async function getActiveBrand(
@@ -31,10 +33,7 @@ export async function getActiveBrand(
 	return json.data?.brand ?? null;
 }
 
-export async function getBrand(
-	id: string,
-	options: ClientOptions = {},
-): Promise<Brand | null> {
+export async function getBrand(id: string, options: ClientOptions = {}): Promise<Brand | null> {
 	const fetchImpl = options.fetch ?? globalThis.fetch;
 	const res = await fetchImpl(urlFor(`/brands.get?id=${encodeURIComponent(id)}`, options));
 	if (!res.ok) return null;
@@ -89,7 +88,9 @@ export function assembleBrandSystemBlock(brand: Brand): string {
 	if (brand.examples.length > 0) {
 		lines.push(`\n## Examples`);
 		for (const e of brand.examples) {
-			lines.push(`- Good: "${e.good}"${e.bad ? ` · Bad: "${e.bad}"` : ""}${e.rationale ? ` — ${e.rationale}` : ""}`);
+			lines.push(
+				`- Good: "${e.good}"${e.bad ? ` · Bad: "${e.bad}"` : ""}${e.rationale ? ` — ${e.rationale}` : ""}`,
+			);
 		}
 	}
 

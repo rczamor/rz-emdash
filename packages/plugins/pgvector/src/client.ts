@@ -4,6 +4,8 @@
 
 import type { SearchResult } from "./types.js";
 
+const TRAILING_SLASH_RE = /\/$/;
+
 const BASE = "/_emdash/api/plugins/pgvector";
 
 interface ClientOptions {
@@ -12,7 +14,7 @@ interface ClientOptions {
 }
 
 function urlFor(path: string, options: ClientOptions): string {
-	return (options.baseUrl ?? "").replace(/\/$/, "") + `${BASE}${path}`;
+	return (options.baseUrl ?? "").replace(TRAILING_SLASH_RE, "") + `${BASE}${path}`;
 }
 
 export async function searchByEmbedding(

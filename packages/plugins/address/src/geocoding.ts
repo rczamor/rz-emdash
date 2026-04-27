@@ -37,10 +37,12 @@ interface CacheRecord {
 
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const NOMINATIM_USER_AGENT = "emdash-cms-plugin-address/0.0.1";
+const WHITESPACE_RE = /\s+/g;
+const NEWLINE_RE = /\n/g;
 
 function cacheKey(prefix: string, payload: string): string {
 	// Limited cache key length; storage IDs are typically up to 256 chars.
-	const trimmed = payload.replace(/\s+/g, " ").trim().toLowerCase();
+	const trimmed = payload.replace(WHITESPACE_RE, " ").trim().toLowerCase();
 	return `${prefix}:${trimmed.slice(0, 200)}`;
 }
 
@@ -48,11 +50,11 @@ async function readCache(
 	key: string,
 	ctx: PluginContext,
 ): Promise<GeocodeResult | ReverseResult | null> {
-	const record = (await ctx.storage.geocache.get(key)) as CacheRecord | null;
+	const record = (await ctx.storage.geocache!.get(key)) as CacheRecord | null;
 	if (!record) return null;
 	const age = Date.now() - new Date(record.createdAt).getTime();
 	if (age > CACHE_TTL_MS) {
-		await ctx.storage.geocache.delete(key);
+		await ctx.storage.geocache!.delete(key);
 		return null;
 	}
 	return record.result;
@@ -65,12 +67,12 @@ async function writeCache(
 	ctx: PluginContext,
 ): Promise<void> {
 	const record: CacheRecord = { query, result, createdAt: new Date().toISOString() };
-	await ctx.storage.geocache.put(key, record);
+	await ctx.storage.geocache!.put(key, record);
 }
 
 function normaliseQuery(address: Address, country?: string): string {
 	if (country) {
-		const formatted = formatAddress(address, country).replace(/\n/g, ", ");
+		const formatted = formatAddress(address, country).replace(NEWLINE_RE, ", ");
 		if (formatted) return formatted;
 	}
 	return [
@@ -98,10 +100,7 @@ interface NominatimReverseHit {
 	address?: Record<string, string>;
 }
 
-async function nominatimSearch(
-	query: string,
-	ctx: PluginContext,
-): Promise<GeocodeResult | null> {
+async function nominatimSearch(query: string, ctx: PluginContext): Promise<GeocodeResult | null> {
 	if (!ctx.http) throw new Error("network:fetch capability missing");
 	const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
 	const res = await ctx.http.fetch(url, {

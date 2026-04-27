@@ -13,11 +13,11 @@ import { automationsPlugin } from "@emdash-cms/plugin-automations";
 import { openrouterPlugin } from "@emdash-cms/plugin-openrouter";
 
 export default defineConfig({
-  integrations: [
-    emdash({
-      plugins: [tokensPlugin(), automationsPlugin(), openrouterPlugin()],
-    }),
-  ],
+	integrations: [
+		emdash({
+			plugins: [tokensPlugin(), automationsPlugin(), openrouterPlugin()],
+		}),
+	],
 });
 ```
 
@@ -72,12 +72,12 @@ module load:
 
 ```json
 {
-  "type": "llm:chat",
-  "model": "anthropic/claude-sonnet-4-5",
-  "system": "You are an editorial assistant.",
-  "prompt": "Suggest 3 tags for: {event.content.title}\n\n{event.content.body}",
-  "kvKey": "tag-suggestions:{event.content.id}",
-  "maxTokens": 200
+	"type": "llm:chat",
+	"model": "anthropic/claude-sonnet-4-5",
+	"system": "You are an editorial assistant.",
+	"prompt": "Suggest 3 tags for: {event.content.title}\n\n{event.content.body}",
+	"kvKey": "tag-suggestions:{event.content.id}",
+	"maxTokens": 200
 }
 ```
 
@@ -90,11 +90,11 @@ code can read `await ctx.kv.get(...)` to surface it.
 
 ```json
 {
-  "type": "llm:summarize",
-  "input": "{event.content.body}",
-  "prompt": "Summarise this blog post in 2 sentences.",
-  "kvKey": "summary:{event.content.id}",
-  "maxTokens": 200
+	"type": "llm:summarize",
+	"input": "{event.content.body}",
+	"prompt": "Summarise this blog post in 2 sentences.",
+	"kvKey": "summary:{event.content.id}",
+	"maxTokens": 200
 }
 ```
 
@@ -106,9 +106,9 @@ factual.`
 
 ```json
 {
-  "type": "llm:embed",
-  "input": "{event.content.title} {event.content.body}",
-  "kvKey": "embedding:{event.collection}:{event.content.id}"
+	"type": "llm:embed",
+	"input": "{event.content.title} {event.content.body}",
+	"kvKey": "embedding:{event.collection}:{event.content.id}"
 }
 ```
 
@@ -119,21 +119,23 @@ search on read for "related posts" features.
 
 1. Create the routine via the automations API:
 
-   ```json
-   {
-     "id": "auto-tag-on-publish",
-     "name": "Suggest tags on publish",
-     "trigger": { "on": "content:afterPublish" },
-     "filter": { "eq": { "path": "event.collection", "value": "posts" } },
-     "actions": [{
-       "type": "llm:chat",
-       "system": "You are an editorial assistant. Reply with 3 tags as a comma-separated list, lowercase, no extra text.",
-       "prompt": "Title: {event.content.title}\n\nBody: {event.content.body}",
-       "kvKey": "tag-suggestions:{event.content.id}",
-       "maxTokens": 60
-     }]
-   }
-   ```
+	   ```json
+	   {
+	     "id": "auto-tag-on-publish",
+	     "name": "Suggest tags on publish",
+	     "trigger": { "on": "content:afterPublish" },
+	     "filter": { "eq": { "path": "event.collection", "value": "posts" } },
+	     "actions": [
+	       {
+	         "type": "llm:chat",
+	         "system": "You are an editorial assistant. Reply with 3 tags as a comma-separated list, lowercase, no extra text.",
+	         "prompt": "Title: {event.content.title}\n\nBody: {event.content.body}",
+	         "kvKey": "tag-suggestions:{event.content.id}",
+	         "maxTokens": 60
+	       }
+	     ]
+	   }
+	   ```
 
 2. On every published post, the LLM produces tags and stashes them
    in KV under `tag-suggestions:<contentId>`.
@@ -149,11 +151,11 @@ For ad-hoc calls outside automations, import the pure client:
 import { chatCompletion, extractText } from "@emdash-cms/plugin-openrouter/client";
 
 const response = await chatCompletion(
-  {
-    model: "anthropic/claude-haiku-4-5",
-    messages: [{ role: "user", content: "Hello!" }],
-  },
-  { apiKey: process.env.OPENROUTER_API_KEY!, siteName: "My Site" },
+	{
+		model: "anthropic/claude-haiku-4-5",
+		messages: [{ role: "user", content: "Hello!" }],
+	},
+	{ apiKey: process.env.OPENROUTER_API_KEY!, siteName: "My Site" },
 );
 console.log(extractText(response));
 ```

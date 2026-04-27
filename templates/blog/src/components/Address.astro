@@ -40,7 +40,9 @@ interface Props {
 }
 
 const { country, prefix = "address_", required, heading } = Astro.props;
-const baseUrl = Astro.site?.toString().replace(/\/$/, "") ?? Astro.url.origin;
+const TRAILING_SLASH_RE = /\/$/;
+const TRAILING_UNDERSCORE_RE = /_$/;
+const baseUrl = Astro.site?.toString().replace(TRAILING_SLASH_RE, "") ?? Astro.url.origin;
 
 const AUTOCOMPLETE_MAP: Record<string, string> = {
 	recipient: "name",
@@ -52,7 +54,7 @@ const AUTOCOMPLETE_MAP: Record<string, string> = {
 	postalCode: "postal-code",
 };
 function mapAutocomplete(field: string, p: string): string | undefined {
-	const section = p.replace(/_$/, "");
+	const section = p.replace(TRAILING_UNDERSCORE_RE, "");
 	const token = AUTOCOMPLETE_MAP[field];
 	if (!token) return undefined;
 	return section ? `section-${section} ${token}` : token;
@@ -156,4 +158,3 @@ try {
 		font-style: italic;
 	}
 </style>
-

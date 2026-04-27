@@ -52,7 +52,7 @@ export function langfusePlugin(): PluginDescriptor {
 		// any internal address. Lock down at install time if needed.
 		allowedHosts: ["*"],
 		storage: {
-			recent_traces: { indexes: ["createdAt", "task_id", "agent_id"] },
+			recent_traces: { indexes: ["createdAt", "taskId", "agentId"] },
 		},
 		adminPages: [{ path: "/langfuse", label: "Langfuse", icon: "chart-line" }],
 		adminWidgets: [{ id: "langfuse-recent", title: "Recent traces", size: "half" }],

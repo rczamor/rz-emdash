@@ -11,11 +11,11 @@ and a webform-compatible field generator.
 import { addressPlugin } from "@emdash-cms/plugin-address";
 
 export default defineConfig({
-  integrations: [
-    emdash({
-      plugins: [addressPlugin()],
-    }),
-  ],
+	integrations: [
+		emdash({
+			plugins: [addressPlugin()],
+		}),
+	],
 });
 ```
 
@@ -38,17 +38,17 @@ Add more at runtime:
 import { registerCountry } from "@emdash-cms/plugin-address/util";
 
 registerCountry({
-  code: "BR",
-  name: "Brazil",
-  fields: [
-    { name: "recipient", label: "Recipient" },
-    { name: "addressLine1", label: "Endereço", required: true },
-    { name: "locality", label: "Cidade", required: true },
-    { name: "administrativeArea", label: "Estado", required: true },
-    { name: "postalCode", label: "CEP", required: true },
-  ],
-  postalCodePattern: "^[0-9]{5}-?[0-9]{3}$",
-  format: "%recipient\n%addressLine1\n%locality - %administrativeArea\n%postalCode\n%country",
+	code: "BR",
+	name: "Brazil",
+	fields: [
+		{ name: "recipient", label: "Recipient" },
+		{ name: "addressLine1", label: "Endereço", required: true },
+		{ name: "locality", label: "Cidade", required: true },
+		{ name: "administrativeArea", label: "Estado", required: true },
+		{ name: "postalCode", label: "CEP", required: true },
+	],
+	postalCodePattern: "^[0-9]{5}-?[0-9]{3}$",
+	format: "%recipient\n%addressLine1\n%locality - %administrativeArea\n%postalCode\n%country",
 });
 ```
 
@@ -58,21 +58,32 @@ Pure functions usable from any plugin or user code:
 
 ```ts
 import {
-  validateAddress, formatAddress,
-  webformFieldsForCountry, addressFromSubmission,
+	validateAddress,
+	formatAddress,
+	webformFieldsForCountry,
+	addressFromSubmission,
 } from "@emdash-cms/plugin-address/util";
 
 const errors = validateAddress(
-  { addressLine1: "1 Apple Park Way", locality: "Cupertino",
-    administrativeArea: "CA", postalCode: "95014" },
-  "US",
+	{
+		addressLine1: "1 Apple Park Way",
+		locality: "Cupertino",
+		administrativeArea: "CA",
+		postalCode: "95014",
+	},
+	"US",
 );
 // → []
 
 formatAddress(
-  { recipient: "Tim Cook", addressLine1: "1 Apple Park Way",
-    locality: "Cupertino", administrativeArea: "CA", postalCode: "95014" },
-  "US",
+	{
+		recipient: "Tim Cook",
+		addressLine1: "1 Apple Park Way",
+		locality: "Cupertino",
+		administrativeArea: "CA",
+		postalCode: "95014",
+	},
+	"US",
 );
 // → "Tim Cook
 //    1 Apple Park Way
@@ -89,18 +100,18 @@ definition:
 import { webformFieldsForCountry } from "@emdash-cms/plugin-address/util";
 
 const addressFields = webformFieldsForCountry("US", {
-  prefix: "shipping_",
-  required: true,
+	prefix: "shipping_",
+	required: true,
 });
 
 const form = {
-  id: "checkout",
-  title: "Checkout",
-  fields: [
-    { name: "email", type: "email", label: "Email", required: true },
-    ...addressFields,  // shipping_recipient, shipping_addressLine1, …
-  ],
-  enabled: true,
+	id: "checkout",
+	title: "Checkout",
+	fields: [
+		{ name: "email", type: "email", label: "Email", required: true },
+		...addressFields, // shipping_recipient, shipping_addressLine1, …
+	],
+	enabled: true,
 };
 ```
 
@@ -177,15 +188,15 @@ For runtime validation in your own pre-save hook:
 import { isAddress, validateStoredAddress } from "@emdash-cms/plugin-address/composite";
 
 definePlugin({
-  hooks: {
-    "content:beforeSave": async (event) => {
-      const value = event.content.shipping;
-      if (isAddress(value)) {
-        const errors = validateStoredAddress(value, "US");
-        if (errors.length) throw new Error(errors[0].message);
-      }
-    },
-  },
+	hooks: {
+		"content:beforeSave": async (event) => {
+			const value = event.content.shipping;
+			if (isAddress(value)) {
+				const errors = validateStoredAddress(value, "US");
+				if (errors.length) throw new Error(errors[0].message);
+			}
+		},
+	},
 });
 ```
 

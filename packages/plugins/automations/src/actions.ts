@@ -4,8 +4,8 @@
  * additional action types via `@emdash-cms/plugin-automations/registry`.
  */
 
-import type { PluginContext } from "emdash";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
+import type { PluginContext } from "emdash";
 
 import { _registerBuiltin, getAction } from "./registry.js";
 import type { Action, EmailAction, KvSetAction, LogAction, WebhookAction } from "./types.js";

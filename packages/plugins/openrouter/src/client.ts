@@ -1,3 +1,4 @@
+const TRAILING_SLASH_RE = /\/$/;
 /**
  * OpenRouter client utilities — pure HTTP wrappers around the
  * OpenRouter REST API. Importable from any plugin or user code.
@@ -84,7 +85,8 @@ export interface OpenRouterConfig {
 
 const DEFAULT_BASE = "https://openrouter.ai/api/v1";
 
-function authHeaders(config: OpenRouterConfig): Record<string, string> {
+/** @internal — exported for unit tests. */
+export function authHeaders(config: OpenRouterConfig): Record<string, string> {
 	const headers: Record<string, string> = {
 		Authorization: `Bearer ${config.apiKey}`,
 		"Content-Type": "application/json",
@@ -100,7 +102,7 @@ export async function chatCompletion(
 ): Promise<ChatCompletionResponse> {
 	if (!config.apiKey) throw new Error("OpenRouter: apiKey missing");
 	const fetchImpl = config.fetchImpl ?? globalThis.fetch;
-	const baseUrl = (config.baseUrl ?? DEFAULT_BASE).replace(/\/$/, "");
+	const baseUrl = (config.baseUrl ?? DEFAULT_BASE).replace(TRAILING_SLASH_RE, "");
 	const res = await fetchImpl(`${baseUrl}/chat/completions`, {
 		method: "POST",
 		headers: authHeaders(config),
@@ -119,7 +121,7 @@ export async function embeddings(
 ): Promise<EmbeddingsResponse> {
 	if (!config.apiKey) throw new Error("OpenRouter: apiKey missing");
 	const fetchImpl = config.fetchImpl ?? globalThis.fetch;
-	const baseUrl = (config.baseUrl ?? DEFAULT_BASE).replace(/\/$/, "");
+	const baseUrl = (config.baseUrl ?? DEFAULT_BASE).replace(TRAILING_SLASH_RE, "");
 	const res = await fetchImpl(`${baseUrl}/embeddings`, {
 		method: "POST",
 		headers: authHeaders(config),
@@ -149,7 +151,7 @@ export async function listModels(
 ): Promise<Array<{ id: string; name?: string; pricing?: Record<string, unknown> }>> {
 	if (!config.apiKey) throw new Error("OpenRouter: apiKey missing");
 	const fetchImpl = config.fetchImpl ?? globalThis.fetch;
-	const baseUrl = (config.baseUrl ?? DEFAULT_BASE).replace(/\/$/, "");
+	const baseUrl = (config.baseUrl ?? DEFAULT_BASE).replace(TRAILING_SLASH_RE, "");
 	const res = await fetchImpl(`${baseUrl}/models`, {
 		method: "GET",
 		headers: authHeaders(config),
@@ -158,5 +160,9 @@ export async function listModels(
 		throw new Error(`OpenRouter models ${res.status}`);
 	}
 	const json = (await res.json()) as { data?: Array<Record<string, unknown>> };
-	return (json.data ?? []) as Array<{ id: string; name?: string; pricing?: Record<string, unknown> }>;
+	return (json.data ?? []) as Array<{
+		id: string;
+		name?: string;
+		pricing?: Record<string, unknown>;
+	}>;
 }

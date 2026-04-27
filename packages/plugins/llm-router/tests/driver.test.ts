@@ -1,15 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+	_resetDrivers,
 	getDriver,
 	listDrivers,
 	registerDriver,
 	resolveActiveDriver,
 	type Driver,
 } from "../src/driver.js";
+import { litellmDriver } from "../src/drivers/litellm.js";
 import { openrouterDriver } from "../src/drivers/openrouter.js";
 import { tensorzeroDriver } from "../src/drivers/tensorzero.js";
-import { litellmDriver } from "../src/drivers/litellm.js";
 
 function makeDriver(id: string, detectKey: string): Driver {
 	return {
@@ -23,10 +24,24 @@ function makeDriver(id: string, detectKey: string): Driver {
 	};
 }
 
+/**
+ * Captures fetch invocations so individual tests can assert on URL/headers/body
+ * without per-test let-binding boilerplate.
+ */
+function recordFetch(response: Response): {
+	calls: Array<{ url: string; init: RequestInit | undefined }>;
+	fetch: typeof fetch;
+} {
+	const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+	const fetch = (async (url: any, init?: RequestInit) => {
+		calls.push({ url: String(url), init });
+		return response.clone();
+	}) as typeof globalThis.fetch;
+	return { calls, fetch };
+}
+
 describe("registerDriver / getDriver / listDrivers", () => {
-	beforeEach(() => {
-		// Drivers persist across tests; we just register fresh ids per case.
-	});
+	beforeEach(() => _resetDrivers());
 
 	it("registers and retrieves by id", () => {
 		const d = makeDriver("test-a", "TEST_A");
@@ -53,6 +68,7 @@ describe("registerDriver / getDriver / listDrivers", () => {
 
 describe("resolveActiveDriver", () => {
 	beforeEach(() => {
+		_resetDrivers();
 		registerDriver(openrouterDriver);
 		registerDriver(tensorzeroDriver);
 		registerDriver(litellmDriver);
@@ -125,31 +141,29 @@ describe("openrouterDriver", () => {
 
 	it("chatCompletion sends Bearer auth + JSON body to /chat/completions", async () => {
 		const h = openrouterDriver.build({ apiKey: "k", siteUrl: "https://s" });
-		let capturedUrl = "";
-		let capturedInit: RequestInit | undefined;
-		const fakeFetch = (async (url: any, init?: RequestInit) => {
-			capturedUrl = String(url);
-			capturedInit = init;
-			return new Response(JSON.stringify({ id: "x" }), { status: 200 });
-		}) as typeof fetch;
+		const { calls, fetch } = recordFetch(
+			new Response(JSON.stringify({ id: "x" }), { status: 200 }),
+		);
+
 		const res = await h.chatCompletion(
 			{ model: "m", messages: [{ role: "user", content: "hi" }] },
-			fakeFetch,
+			fetch,
 		);
-		expect(capturedUrl).toContain("/chat/completions");
-		const headers = capturedInit?.headers as Record<string, string>;
+
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.url).toContain("/chat/completions");
+		const headers = calls[0]?.init?.headers as Record<string, string>;
 		expect(headers.Authorization).toBe("Bearer k");
 		expect(headers["HTTP-Referer"]).toBe("https://s");
-		expect((res as any).id).toBe("x");
+		expect((res as { id: string }).id).toBe("x");
 	});
 
 	it("chatCompletion throws on non-ok", async () => {
 		const h = openrouterDriver.build({ apiKey: "k" });
-		const fakeFetch = (async () =>
-			new Response("nope", { status: 500 })) as unknown as typeof fetch;
-		await expect(
-			h.chatCompletion({ model: "m", messages: [] }, fakeFetch),
-		).rejects.toThrow(/OpenRouter chat 500/);
+		const { fetch } = recordFetch(new Response("nope", { status: 500 }));
+		await expect(h.chatCompletion({ model: "m", messages: [] }, fetch)).rejects.toThrow(
+			/OpenRouter chat 500/,
+		);
 	});
 });
 

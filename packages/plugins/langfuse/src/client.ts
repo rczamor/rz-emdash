@@ -1,3 +1,4 @@
+const TRAILING_SLASH_RE = /\/$/;
 /**
  * Langfuse client — lightweight fetch wrappers used by other plugins
  * (e.g. OpenRouter for inline trace dispatch).
@@ -11,7 +12,7 @@ interface ClientOptions {
 }
 
 function urlFor(path: string, options: ClientOptions): string {
-	return (options.baseUrl ?? "").replace(/\/$/, "") + `${BASE}${path}`;
+	return (options.baseUrl ?? "").replace(TRAILING_SLASH_RE, "") + `${BASE}${path}`;
 }
 
 export interface SubmitTraceInput {
@@ -60,7 +61,9 @@ export async function submitTrace(
 	});
 	if (!res.ok) return { ok: false, error: `langfuse/trace returned ${res.status}` };
 	const json = (await res.json()) as { data?: { ok?: boolean; traceId?: string; error?: string } };
-	return json.data ?? { ok: false, error: "Empty response" };
+	const data = json.data;
+	if (!data) return { ok: false, error: "Empty response" };
+	return { ...data, ok: data.ok === true };
 }
 
 export async function submitGeneration(
@@ -74,8 +77,12 @@ export async function submitGeneration(
 		body: JSON.stringify(body),
 	});
 	if (!res.ok) return { ok: false, error: `langfuse/generation returned ${res.status}` };
-	const json = (await res.json()) as { data?: { ok?: boolean; generationId?: string; error?: string } };
-	return json.data ?? { ok: false, error: "Empty response" };
+	const json = (await res.json()) as {
+		data?: { ok?: boolean; generationId?: string; error?: string };
+	};
+	const data = json.data;
+	if (!data) return { ok: false, error: "Empty response" };
+	return { ...data, ok: data.ok === true };
 }
 
 export async function submitScore(
@@ -90,5 +97,7 @@ export async function submitScore(
 	});
 	if (!res.ok) return { ok: false, error: `langfuse/score returned ${res.status}` };
 	const json = (await res.json()) as { data?: { ok?: boolean; scoreId?: string; error?: string } };
-	return json.data ?? { ok: false, error: "Empty response" };
+	const data = json.data;
+	if (!data) return { ok: false, error: "Empty response" };
+	return { ...data, ok: data.ok === true };
 }

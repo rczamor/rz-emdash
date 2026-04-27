@@ -28,12 +28,26 @@ const PARSED_KV = "cache:parsed";
 const REPORT_KV = "cache:report";
 const SOURCE_KV = "cache:source";
 const WATCH_PATH_KV = "cache:watch_path";
+const WATCHER_STATE = Symbol.for("emdash.pluginDesignSystem.watcher");
 
-let watcher: DesignWatcher | null = null;
+interface WatcherState {
+	watcher: DesignWatcher | null;
+}
+
+type WatcherGlobal = typeof globalThis & {
+	[WATCHER_STATE]?: WatcherState;
+};
+
+function getWatcherState(): WatcherState {
+	const global = globalThis as WatcherGlobal;
+	global[WATCHER_STATE] ??= { watcher: null };
+	return global[WATCHER_STATE];
+}
 
 function startWatcher(ctx: PluginContext): void {
-	if (watcher) return;
-	watcher = new DesignWatcher({
+	const state = getWatcherState();
+	if (state.watcher) return;
+	state.watcher = new DesignWatcher({
 		onChange: async (source, path) => {
 			try {
 				const parsed = parseDesignSystem(source);
@@ -60,7 +74,7 @@ function startWatcher(ctx: PluginContext): void {
 			ctx.log.warn("Design system: watcher error", { error: err.message });
 		},
 	});
-	watcher.start();
+	state.watcher.start();
 }
 
 interface RouteCtx {
@@ -98,8 +112,7 @@ async function buildAdminPage(ctx: PluginContext) {
 			type: "banner",
 			variant: "default",
 			title: "No design system loaded yet",
-			description:
-				"POST raw DESIGN.md text to /_emdash/api/plugins/design-system/design.parse",
+			description: "POST raw DESIGN.md text to /_emdash/api/plugins/design-system/design.parse",
 		});
 		return { blocks };
 	}
@@ -166,7 +179,8 @@ async function buildAdminPage(ctx: PluginContext) {
 			type: "banner",
 			variant: "default",
 			title: "✅ Spec-clean",
-			description: "No validation findings. Token refs all resolve, no duplicate sections, contrast within WCAG AA.",
+			description:
+				"No validation findings. Token refs all resolve, no duplicate sections, contrast within WCAG AA.",
 		});
 	}
 
@@ -176,13 +190,13 @@ async function buildAdminPage(ctx: PluginContext) {
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				ctx.log.info("Design system plugin installed");
 				startWatcher(ctx);
 			},
 		},
 		"plugin:activate": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				startWatcher(ctx);
 			},
 		},
@@ -206,16 +220,17 @@ export default definePlugin({
 
 		"design.reload": {
 			handler: async (_routeCtx: RouteCtx, ctx: PluginContext) => {
-				if (!watcher) startWatcher(ctx);
-				if (!watcher) return { ok: false, error: "Watcher unavailable (no fs access)" };
-				return await watcher.reload();
+				const state = getWatcherState();
+				if (!state.watcher) startWatcher(ctx);
+				if (!state.watcher) return { ok: false, error: "Watcher unavailable (no fs access)" };
+				return await state.watcher.reload();
 			},
 		},
 
 		"design.watch.status": {
 			handler: async (_routeCtx: RouteCtx, ctx: PluginContext) => {
 				const path = await ctx.kv.get<string>(WATCH_PATH_KV);
-				const candidates = watcher?.candidatePaths() ?? [];
+				const candidates = getWatcherState().watcher?.candidatePaths() ?? [];
 				return {
 					ok: true,
 					watching: Boolean(path),

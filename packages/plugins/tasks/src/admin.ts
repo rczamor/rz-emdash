@@ -12,7 +12,7 @@
  * one mutation path.
  */
 
-import type { PluginContext } from "emdash";
+import type { PluginContext, WhereClause, WhereValue } from "emdash";
 
 import { allTransitions, STATUS_BADGE_COLORS } from "./states.js";
 import type { Task, TaskStatus } from "./types.js";
@@ -27,6 +27,12 @@ const STATUS_ORDER: TaskStatus[] = [
 	"cancelled",
 ];
 
+function scalarString(value: unknown, fallback = ""): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	return fallback;
+}
+
 interface AdminInteraction {
 	type?: string;
 	page?: string;
@@ -37,13 +43,13 @@ interface AdminInteraction {
 }
 
 async function loadTask(id: string, ctx: PluginContext): Promise<Task | null> {
-	const v = await ctx.storage.tasks.get(id);
+	const v = await ctx.storage.tasks!.get(id);
 	return (v as Task | null) ?? null;
 }
 
-async function listTasks(filter: Record<string, unknown> | undefined, ctx: PluginContext) {
-	const result = await ctx.storage.tasks.query({
-		filter,
+async function listTasks(filter: WhereClause | undefined, ctx: PluginContext) {
+	const result = await ctx.storage.tasks!.query({
+		where: filter,
 		orderBy: { created_at: "desc" },
 		limit: 200,
 	});
@@ -83,7 +89,10 @@ function viewListPage(tasks: Task[], filterStatus?: string, filterAssignee?: str
 					action_id: "filterStatus",
 					label: "Status",
 					initial_value: filterStatus ?? "",
-					options: [{ value: "", label: "All" }, ...STATUS_ORDER.map((s) => ({ value: s, label: s }))],
+					options: [
+						{ value: "", label: "All" },
+						...STATUS_ORDER.map((s) => ({ value: s, label: s })),
+					],
 				},
 				{
 					type: "text_input",
@@ -151,7 +160,12 @@ function viewDetail(task: Task) {
 		text: `→ ${to}`,
 		action_id: "transition_task",
 		value: `${task.id}|${to}`,
-		style: to === "approved" || to === "published" ? "primary" : to === "rejected" || to === "cancelled" ? "danger" : "secondary",
+		style:
+			to === "approved" || to === "published"
+				? "primary"
+				: to === "rejected" || to === "cancelled"
+					? "danger"
+					: "secondary",
 	}));
 
 	const blocks: unknown[] = [
@@ -183,7 +197,12 @@ function viewDetail(task: Task) {
 			{ label: "Status", value: task.status },
 			{ label: "Deadline", value: task.deadline ?? "—" },
 			{ label: "Publish at", value: task.publish_at ?? "—" },
-			{ label: "Target", value: task.target_collection ? `${task.target_collection}${task.target_id ? `/${task.target_id}` : ""}` : "—" },
+			{
+				label: "Target",
+				value: task.target_collection
+					? `${task.target_collection}${task.target_id ? `/${task.target_id}` : ""}`
+					: "—",
+			},
 			{ label: "Cost (calls)", value: String(task.cost.calls) },
 			{ label: "Cost (tokens)", value: String(task.cost.tokensIn + task.cost.tokensOut) },
 			{ label: "Cost ($USD)", value: task.cost.usd ? `$${task.cost.usd.toFixed(4)}` : "—" },
@@ -214,9 +233,7 @@ function viewDetail(task: Task) {
 	blocks.push({
 		type: "form",
 		block_id: `comment_${task.id}`,
-		fields: [
-			{ type: "text_input", action_id: "text", label: "Comment", multiline: true },
-		],
+		fields: [{ type: "text_input", action_id: "text", label: "Comment", multiline: true }],
 		submit: { label: "Post comment", action_id: `comment_task|${task.id}` },
 	});
 
@@ -254,14 +271,14 @@ function viewDetail(task: Task) {
 
 function summarizeActivity(type: string, data?: Record<string, unknown>): string {
 	if (!data) return "";
-	if (type === "transitioned") return `${data.from} → ${data.to}`;
-	if (type === "assigned") return String(data.assignee ?? "");
+	if (type === "transitioned") return `${scalarString(data.from)} → ${scalarString(data.to)}`;
+	if (type === "assigned") return scalarString(data.assignee);
 	if (type === "commented") {
-		const t = String(data.text ?? "");
+		const t = scalarString(data.text);
 		return t.length > 80 ? t.slice(0, 77) + "…" : t;
 	}
 	if (type === "llm-call" || type === "cost") {
-		return `${data.model ?? "?"} · ${(data.tokensIn ?? 0) as number}+${(data.tokensOut ?? 0) as number}`;
+		return `${scalarString(data.model, "?")} · ${Number(data.tokensIn ?? 0)}+${Number(data.tokensOut ?? 0)}`;
 	}
 	return JSON.stringify(data).slice(0, 80);
 }
@@ -338,9 +355,9 @@ export async function routeAdminInteraction(
 		const aid = interaction.action_id ?? "";
 		if (aid === "tasks_filter") {
 			const v = interaction.values ?? {};
-			const filterStatus = v.filterStatus ? String(v.filterStatus) : undefined;
-			const filterAssignee = v.filterAssignee ? String(v.filterAssignee) : undefined;
-			const filter: Record<string, unknown> = {};
+			const filterStatus = v.filterStatus ? scalarString(v.filterStatus) : undefined;
+			const filterAssignee = v.filterAssignee ? scalarString(v.filterAssignee) : undefined;
+			const filter: Record<string, WhereValue> = {};
 			if (filterStatus) filter.status = filterStatus;
 			if (filterAssignee) filter.assignee = filterAssignee;
 			const tasks = await listTasks(Object.keys(filter).length > 0 ? filter : undefined, ctx);
@@ -348,12 +365,18 @@ export async function routeAdminInteraction(
 		}
 		const [verb, taskId] = aid.split("|");
 		if (verb === "assign_task" && taskId) {
-			const assignee = String(interaction.values?.assignee ?? "").trim();
-			if (assignee) return { kind: "effect", effect: { assign: { id: taskId, assignee } }, refresh: { taskId } };
+			const assignee = scalarString(interaction.values?.assignee).trim();
+			if (assignee)
+				return {
+					kind: "effect",
+					effect: { assign: { id: taskId, assignee } },
+					refresh: { taskId },
+				};
 		}
 		if (verb === "comment_task" && taskId) {
-			const text = String(interaction.values?.text ?? "").trim();
-			if (text) return { kind: "effect", effect: { comment: { id: taskId, text } }, refresh: { taskId } };
+			const text = scalarString(interaction.values?.text).trim();
+			if (text)
+				return { kind: "effect", effect: { comment: { id: taskId, text } }, refresh: { taskId } };
 		}
 	}
 

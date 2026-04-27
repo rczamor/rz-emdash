@@ -19,9 +19,7 @@ ship false confidence.
 import { pgvectorPlugin } from "@emdash-cms/plugin-pgvector";
 
 export default defineConfig({
-  integrations: [
-    emdash({ plugins: [pgvectorPlugin()] }),
-  ],
+	integrations: [emdash({ plugins: [pgvectorPlugin()] })],
 });
 ```
 
@@ -100,12 +98,16 @@ The cleanest pattern is two automation actions composed:
 
 ```json
 [
-  { "type": "llm:embed",
-    "input": "{event.content.title} {event.content.body}",
-    "kvKey": "embedding-buffer:{event.content.id}" },
-  { "type": "webhook",
-    "url": "/_emdash/api/plugins/pgvector/upsert",
-    "body": "{ \"source_collection\": \"posts\", \"source_id\": \"{event.content.id}\", \"model\": \"openai/text-embedding-3-small\", \"embedding\": <KV-fetched> }" }
+	{
+		"type": "llm:embed",
+		"input": "{event.content.title} {event.content.body}",
+		"kvKey": "embedding-buffer:{event.content.id}"
+	},
+	{
+		"type": "webhook",
+		"url": "/_emdash/api/plugins/pgvector/upsert",
+		"body": "{ \"source_collection\": \"posts\", \"source_id\": \"{event.content.id}\", \"model\": \"openai/text-embedding-3-small\", \"embedding\": <KV-fetched> }"
+	}
 ]
 ```
 
@@ -129,14 +131,16 @@ deployment. Two patterns:
 
 ```json
 {
-  "id": "embed-on-save",
-  "trigger": { "on": "content:afterSave" },
-  "filter": { "eq": { "path": "event.collection", "value": "posts" } },
-  "actions": [
-    { "type": "llm:embed",
-      "input": "{event.content.title} {event.content.body}",
-      "kvKey": "embedding-buffer" }
-  ]
+	"id": "embed-on-save",
+	"trigger": { "on": "content:afterSave" },
+	"filter": { "eq": { "path": "event.collection", "value": "posts" } },
+	"actions": [
+		{
+			"type": "llm:embed",
+			"input": "{event.content.title} {event.content.body}",
+			"kvKey": "embedding-buffer"
+		}
+	]
 }
 ```
 

@@ -9,6 +9,8 @@
 
 import type { Agent, CompiledAgentContext, MemoryEntry } from "./types.js";
 
+const TRAILING_SLASH_RE = /\/$/;
+
 const BASE = "/_emdash/api/plugins/agents";
 
 interface ClientOptions {
@@ -17,7 +19,7 @@ interface ClientOptions {
 }
 
 function urlFor(path: string, options: ClientOptions): string {
-	return (options.baseUrl ?? "").replace(/\/$/, "") + `${BASE}${path}`;
+	return (options.baseUrl ?? "").replace(TRAILING_SLASH_RE, "") + `${BASE}${path}`;
 }
 
 export async function getAgent(id: string, options: ClientOptions = {}): Promise<Agent | null> {
@@ -42,7 +44,14 @@ export async function compileAgentContext(
 }
 
 export async function putMemory(
-	body: { agent_id: string; key: string; value: unknown; importance?: number; source?: string; tags?: string[] },
+	body: {
+		agent_id: string;
+		key: string;
+		value: unknown;
+		importance?: number;
+		source?: string;
+		tags?: string[];
+	},
 	options: ClientOptions = {},
 ): Promise<MemoryEntry | null> {
 	const fetchImpl = options.fetch ?? globalThis.fetch;
@@ -71,9 +80,7 @@ export function assembleSystemPrompt(ctx: CompiledAgentContext): string {
 
 	if (ctx.skills.length > 0) {
 		sections.push(
-			`# Skills\n\n${ctx.skills
-				.map((s) => `## ${s.name}\n\n${s.body.trim()}`)
-				.join("\n\n")}`,
+			`# Skills\n\n${ctx.skills.map((s) => `## ${s.name}\n\n${s.body.trim()}`).join("\n\n")}`,
 		);
 	}
 

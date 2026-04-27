@@ -20,10 +20,10 @@
  * tensorzero, openrouter, litellm).
  */
 
-import { definePlugin } from "emdash";
-import type { PluginContext } from "emdash";
 import { registerAction } from "@emdash-cms/plugin-automations/registry";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
+import { definePlugin } from "emdash";
+import type { PluginContext } from "emdash";
 
 import { runChatLoop, extractText } from "./chat-loop.js";
 import {
@@ -37,12 +37,10 @@ import {
 import { litellmDriver } from "./drivers/litellm.js";
 import { openrouterDriver } from "./drivers/openrouter.js";
 import { tensorzeroDriver } from "./drivers/tensorzero.js";
-import {
-	checkQuota,
-	compileAgentSystemPrompt,
-	fetchAgentToolsForOpenAI,
-} from "./task-context.js";
+import { checkQuota, compileAgentSystemPrompt, fetchAgentToolsForOpenAI } from "./task-context.js";
 import type { ChatCompletionInput, ChatMessage } from "./types.js";
+
+const TRAILING_SLASH_RE = /\/$/;
 
 // Register built-in drivers in detection priority order.
 // User can override with LLM_ROUTER_DRIVER env var.
@@ -59,6 +57,10 @@ interface RouteCtx {
 }
 
 const NOW = () => new Date().toISOString();
+
+function optionalString(value: unknown): string | undefined {
+	return typeof value === "string" ? value : undefined;
+}
 
 function getActiveDriver(): { driver: Driver; handlers: DriverHandlers } | null {
 	const driver = resolveActiveDriver(process.env);
@@ -93,7 +95,7 @@ async function recordUsage(
 	usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number },
 ): Promise<void> {
 	const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-	await ctx.storage.usage.put(id, {
+	await ctx.storage.usage!.put(id, {
 		driver: driverId,
 		model,
 		promptTokens: usage.prompt_tokens ?? 0,
@@ -121,7 +123,11 @@ async function runAgentAwareChat(
 	if (!body.messages) return { ok: false, error: "messages required" };
 
 	const active = getActiveDriver();
-	if (!active) return { ok: false, error: "No LLM driver configured (set TENSORZERO_HOST / OPENROUTER_API_KEY / LITELLM_HOST)" };
+	if (!active)
+		return {
+			ok: false,
+			error: "No LLM driver configured (set TENSORZERO_HOST / OPENROUTER_API_KEY / LITELLM_HOST)",
+		};
 
 	let messages: ChatMessage[] = [...body.messages];
 	let model = body.model;
@@ -189,8 +195,9 @@ async function runAgentAwareChat(
 		);
 		if (response.usage) await recordUsage(ctx, active.driver.id, model, response.usage);
 		if (body.task_id && ctx.http && response.usage) {
-			const baseUrl =
-				((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(/\/$/, "");
+			const baseUrl = (
+				(ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321"
+			).replace(TRAILING_SLASH_RE, "");
 			try {
 				await ctx.http.fetch(`${baseUrl}/_emdash/api/plugins/tasks/cost.record`, {
 					method: "POST",
@@ -319,7 +326,8 @@ registerAction<LlmEmbedAction>("llm:embed", async (action, tokenCtx, ctx) => {
 	const model = action.model ?? (await getDefaultEmbeddingsModel(ctx));
 	const inputText = await resolveTokens(action.input, tokenCtx);
 	const response = await active.handlers.embeddings({ model, input: inputText }, fetchImpl);
-	if (response.usage) await recordUsage(ctx, active.driver.id, model, { total_tokens: response.usage.total_tokens });
+	if (response.usage)
+		await recordUsage(ctx, active.driver.id, model, { total_tokens: response.usage.total_tokens });
 	const vector = response.data[0]?.embedding ?? [];
 	await ctx.kv.set(await resolveTokens(action.kvKey, tokenCtx), vector);
 });
@@ -356,7 +364,8 @@ async function handleNativeRoute(
 	const driver = getDriver(driverId);
 	if (!driver) return { ok: false, error: `Unknown driver: ${driverId}` };
 	const route = driver.nativeRoutes?.find((r) => r.name === routeName);
-	if (!route) return { ok: false, error: `Driver "${driverId}" has no native route "${routeName}"` };
+	if (!route)
+		return { ok: false, error: `Driver "${driverId}" has no native route "${routeName}"` };
 	const fetchImpl = ctx.http?.fetch.bind(ctx.http) ?? globalThis.fetch;
 	try {
 		return await route.handler(body, fetchImpl, ctx);
@@ -374,7 +383,7 @@ async function buildAdminPage(ctx: PluginContext) {
 	const defaultEmbed = await getDefaultEmbeddingsModel(ctx);
 
 	const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-	const recent = await ctx.storage.usage.query({
+	const recent = await ctx.storage.usage!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 1000,
 	});
@@ -484,7 +493,7 @@ async function buildAdminPage(ctx: PluginContext) {
 
 async function buildUsageWidget(ctx: PluginContext) {
 	const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-	const recent = await ctx.storage.usage.query({
+	const recent = await ctx.storage.usage!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 500,
 	});
@@ -513,7 +522,7 @@ async function buildUsageWidget(ctx: PluginContext) {
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				const active = getActiveDriver();
 				ctx.log.info(
 					`LLM Router installed. ${active ? `Active driver: ${active.driver.name}.` : "No driver active — set TENSORZERO_HOST / OPENROUTER_API_KEY / LITELLM_HOST."} llm:chat / llm:summarize / llm:embed / llm:agent action types registered.`,
@@ -539,9 +548,12 @@ export default definePlugin({
 
 		complete: {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| { model?: string; prompt?: string; agent_id?: string; task_id?: string }
-					| null;
+				const body = routeCtx.input as {
+					model?: string;
+					prompt?: string;
+					agent_id?: string;
+					task_id?: string;
+				} | null;
 				if (!body || !body.prompt) return { ok: false, error: "prompt required" };
 				const result = await runAgentAwareChat(
 					{
@@ -574,9 +586,14 @@ export default definePlugin({
 				const fetchImpl = ctx.http?.fetch.bind(ctx.http) ?? globalThis.fetch;
 				const model = body.model ?? (await getDefaultEmbeddingsModel(ctx));
 				try {
-					const response = await active.handlers.embeddings({ model, input: body.input }, fetchImpl);
+					const response = await active.handlers.embeddings(
+						{ model, input: body.input },
+						fetchImpl,
+					);
 					if (response.usage)
-						await recordUsage(ctx, active.driver.id, model, { total_tokens: response.usage.total_tokens });
+						await recordUsage(ctx, active.driver.id, model, {
+							total_tokens: response.usage.total_tokens,
+						});
 					return { ok: true, response };
 				} catch (err) {
 					return { ok: false, error: err instanceof Error ? err.message : String(err) };
@@ -643,9 +660,10 @@ export default definePlugin({
 
 		"settings.save": {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| { defaultModel?: string; defaultEmbeddingsModel?: string }
-					| null;
+				const body = routeCtx.input as {
+					defaultModel?: string;
+					defaultEmbeddingsModel?: string;
+				} | null;
 				if (!body) return { ok: false, error: "Body required" };
 				if (body.defaultModel) await ctx.kv.set(DEFAULT_MODEL_KV, body.defaultModel);
 				if (body.defaultEmbeddingsModel)
@@ -671,9 +689,11 @@ export default definePlugin({
 				}
 				if (interaction.type === "form_submit" && interaction.action_id === "save_defaults") {
 					const v = interaction.values ?? {};
-					if (v.defaultModel) await ctx.kv.set(DEFAULT_MODEL_KV, String(v.defaultModel));
-					if (v.defaultEmbeddingsModel)
-						await ctx.kv.set(DEFAULT_EMBED_MODEL_KV, String(v.defaultEmbeddingsModel));
+					const defaultModel = optionalString(v.defaultModel);
+					const defaultEmbeddingsModel = optionalString(v.defaultEmbeddingsModel);
+					if (defaultModel) await ctx.kv.set(DEFAULT_MODEL_KV, defaultModel);
+					if (defaultEmbeddingsModel)
+						await ctx.kv.set(DEFAULT_EMBED_MODEL_KV, defaultEmbeddingsModel);
 					return {
 						...(await buildAdminPage(ctx)),
 						toast: { message: "Defaults saved", type: "success" },

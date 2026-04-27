@@ -11,9 +11,7 @@ dataset runs, prompt management. Works with self-hosted Langfuse
 import { langfusePlugin } from "@emdash-cms/plugin-langfuse";
 
 export default defineConfig({
-  integrations: [
-    emdash({ plugins: [langfusePlugin()] }),
-  ],
+	integrations: [emdash({ plugins: [langfusePlugin()] })],
 });
 ```
 
@@ -62,13 +60,13 @@ when you need richer metadata than the OpenRouter cost-recorder.
 
 ```json
 {
-  "type": "langfuse:trace",
-  "name": "task-{event.task.id}-completed",
-  "userId": "agent:{event.task.assignee}",
-  "taskId": "{event.task.id}",
-  "tags": ["agentic", "{event.task.target_collection}"],
-  "input": "{event.task.goal}",
-  "output": "{event.task.output}"
+	"type": "langfuse:trace",
+	"name": "task-{event.task.id}-completed",
+	"userId": "agent:{event.task.assignee}",
+	"taskId": "{event.task.id}",
+	"tags": ["agentic", "{event.task.target_collection}"],
+	"input": "{event.task.goal}",
+	"output": "{event.task.output}"
 }
 ```
 
@@ -79,15 +77,17 @@ decisions:
 
 ```json
 {
-  "id": "score-on-review",
-  "trigger": { "on": "task:reviewed" },
-  "filter": { "exists": { "path": "event.task.metadata.langfuse_trace_id" } },
-  "actions": [{
-    "type": "langfuse:score",
-    "traceId": "{event.task.metadata.langfuse_trace_id}",
-    "name": "review",
-    "value": "{event.decision}"
-  }]
+	"id": "score-on-review",
+	"trigger": { "on": "task:reviewed" },
+	"filter": { "exists": { "path": "event.task.metadata.langfuse_trace_id" } },
+	"actions": [
+		{
+			"type": "langfuse:score",
+			"traceId": "{event.task.metadata.langfuse_trace_id}",
+			"name": "review",
+			"value": "{event.decision}"
+		}
+	]
 }
 ```
 
@@ -97,10 +97,10 @@ Fetch a versioned prompt and stash in KV for downstream actions:
 
 ```json
 {
-  "type": "langfuse:get-prompt",
-  "name": "blog-writer-system",
-  "label": "production",
-  "kvKey": "prompt:blog-writer"
+	"type": "langfuse:get-prompt",
+	"name": "blog-writer-system",
+	"label": "production",
+	"kvKey": "prompt:blog-writer"
 }
 ```
 
@@ -125,23 +125,25 @@ emitted it:
 
 ```json
 {
-  "id": "auto-trace-llm",
-  "name": "Auto-trace every LLM call to Langfuse",
-  "trigger": { "on": "llm:call-finished" },
-  "actions": [{
-    "type": "langfuse:trace",
-    "name": "{event.provider}/{event.model}",
-    "userId": "agent:{event.agentId|default:system}",
-    "taskId": "{event.taskId}",
-    "tags": ["{event.provider}", "{event.model}"],
-    "input": "{event.input|json}",
-    "output": "{event.output|json}",
-    "metadata": {
-      "usage": "{event.usage|json}",
-      "durationMs": "{event.durationMs}",
-      "finishReason": "{event.finishReason}"
-    }
-  }]
+	"id": "auto-trace-llm",
+	"name": "Auto-trace every LLM call to Langfuse",
+	"trigger": { "on": "llm:call-finished" },
+	"actions": [
+		{
+			"type": "langfuse:trace",
+			"name": "{event.provider}/{event.model}",
+			"userId": "agent:{event.agentId|default:system}",
+			"taskId": "{event.taskId}",
+			"tags": ["{event.provider}", "{event.model}"],
+			"input": "{event.input|json}",
+			"output": "{event.output|json}",
+			"metadata": {
+				"usage": "{event.usage|json}",
+				"durationMs": "{event.durationMs}",
+				"finishReason": "{event.finishReason}"
+			}
+		}
+	]
 }
 ```
 

@@ -9,7 +9,7 @@
 		"typecheck:demos": "pnpm run --workspace-concurrency=1 --filter {./demos/*} --filter !@emdash-cms/demo-cloudflare typecheck",
 		"typecheck:templates": "pnpm run --workspace-concurrency=1 --filter {./templates/*} typecheck",
 		"check": "pnpm run typecheck && pnpm run --filter {./packages/*} check",
-		"test": "pnpm run --filter {./packages/*} test",
+		"test": "pnpm run --filter {./packages/**} test",
 		"test:unit": "pnpm run --filter emdash --filter @emdash-cms/auth --filter @emdash-cms/blocks --filter @emdash-cms/gutenberg-to-portable-text --filter @emdash-cms/marketplace test",
 		"test:browser": "pnpm run --filter @emdash-cms/admin test",
 		"test:e2e": "playwright test",

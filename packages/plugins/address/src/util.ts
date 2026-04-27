@@ -5,7 +5,12 @@
  * `@emdash-cms/plugin-address/util`.
  */
 
-import { COUNTRIES, type AddressFieldName, type AddressFieldSpec, type CountrySpec } from "./countries.js";
+import {
+	COUNTRIES,
+	type AddressFieldName,
+	type AddressFieldSpec,
+	type CountrySpec,
+} from "./countries.js";
 
 export type Address = Partial<Record<AddressFieldName, string>>;
 
@@ -15,6 +20,14 @@ export interface ValidationError {
 }
 
 const RUNTIME_REGISTRY: Record<string, CountrySpec> = {};
+const FORMAT_TOKEN_RE = /%([a-zA-Z][a-zA-Z0-9]*)/g;
+const REPEATED_SPACE_RE = /\s{2,}/g;
+const REPEATED_COMMA_RE = /\s*,\s*,/g;
+
+/** @internal — test hook for clearing runtime registrations between cases. */
+export function _clearRuntimeCountries(): void {
+	for (const key of Object.keys(RUNTIME_REGISTRY)) delete RUNTIME_REGISTRY[key];
+}
 
 export function registerCountry(spec: CountrySpec): void {
 	RUNTIME_REGISTRY[spec.code] = spec;
@@ -28,7 +41,7 @@ export function listCountries(): Array<{ code: string; name: string }> {
 	const merged: Record<string, CountrySpec> = { ...COUNTRIES, ...RUNTIME_REGISTRY };
 	return Object.values(merged)
 		.map((c) => ({ code: c.code, name: c.name }))
-		.sort((a, b) => a.name.localeCompare(b.name));
+		.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
@@ -84,9 +97,9 @@ export function formatAddress(address: Address, countryCode: string): string {
 		.split("\n")
 		.map((line) =>
 			line
-				.replace(/%([a-zA-Z]+)/g, (_, key: string) => lookup(key))
-				.replace(/\s{2,}/g, " ")
-				.replace(/\s*,\s*,/g, ",")
+				.replace(FORMAT_TOKEN_RE, (_, key: string) => lookup(key))
+				.replace(REPEATED_SPACE_RE, " ")
+				.replace(REPEATED_COMMA_RE, ",")
 				.trim(),
 		)
 		.filter((line) => line && line !== ",")

@@ -17,10 +17,14 @@ import type {
 } from "./types.js";
 
 const FRONTMATTER_RE = /^---\s*\n([\s\S]*?)\n---\s*\n?/;
-const SECTION_HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/gm;
+const HEADING_LINE_RE = /^(#{1,6})\s+(.+?)\s*$/;
 const TOKEN_REF_RE = /\{([a-zA-Z][a-zA-Z0-9_.-]*)\}/g;
+const HEX_PREFIX_RE = /^#/;
+const TEXT_COLOR_KEY_RE = /^(text|foreground|fg|on(Background|Surface|Primary|Secondary)?)/i;
+const BACKGROUND_COLOR_KEY_RE = /^(background|bg|surface|primary|secondary)$/i;
+const DOS_DONTS_HEADING_RE = /do(?:es|'s)?\s*and\s*don'?ts?/i;
 
-const KNOWN_SECTIONS = [
+const KNOWN_SECTIONS = new Set([
 	"overview",
 	"colors",
 	"typography",
@@ -32,7 +36,7 @@ const KNOWN_SECTIONS = [
 	"do's and don'ts",
 	"dos and donts",
 	"do and don't",
-];
+]);
 
 export function parseDesignSystem(source: string): ParsedDesignSystem {
 	const fmMatch = source.match(FRONTMATTER_RE);
@@ -47,7 +51,7 @@ export function parseDesignSystem(source: string): ParsedDesignSystem {
 		} catch {
 			// Frontmatter parse error — leave as empty; validate() will report.
 		}
-		bodyOffset = fmMatch[0]!.length;
+		bodyOffset = fmMatch[0].length;
 	}
 	const bodyMarkdown = source.slice(bodyOffset);
 
@@ -67,7 +71,7 @@ function extractSections(body: string): DesignSystemSection[] {
 	const sections: DesignSystemSection[] = [];
 	let current: DesignSystemSection | null = null;
 	for (const line of lines) {
-		const m = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+		const m = line.match(HEADING_LINE_RE);
 		if (m) {
 			if (current) sections.push(current);
 			current = {
@@ -136,7 +140,7 @@ export function validateDesignSystem(parsed: ParsedDesignSystem): ValidationRepo
 
 	// Info: unknown body sections are allowed by spec, but flag for visibility.
 	for (const s of parsed.sections.filter((x) => x.level === 2)) {
-		if (!KNOWN_SECTIONS.includes(s.heading.trim().toLowerCase())) {
+		if (!KNOWN_SECTIONS.has(s.heading.trim().toLowerCase())) {
 			findings.push({
 				level: "info",
 				code: "unknown-section",
@@ -212,7 +216,7 @@ export function resolveTokens(fm: DesignSystemFrontmatter): {
 // ── WCAG contrast (best-effort) ─────────────────────────────────────────────
 
 function hexToRgb(hex: string): [number, number, number] | null {
-	const cleaned = hex.replace(/^#/, "");
+	const cleaned = hex.replace(HEX_PREFIX_RE, "");
 	if (cleaned.length === 3) {
 		const r = parseInt(cleaned[0]! + cleaned[0], 16);
 		const g = parseInt(cleaned[1]! + cleaned[1], 16);
@@ -230,12 +234,13 @@ function hexToRgb(hex: string): [number, number, number] | null {
 	return null;
 }
 
+function luminanceChannel(c: number): number {
+	const sRGB = c / 255;
+	return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+}
+
 function relativeLuminance([r, g, b]: [number, number, number]): number {
-	const channel = (c: number) => {
-		const sRGB = c / 255;
-		return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
-	};
-	const [R, G, B] = [channel(r), channel(g), channel(b)];
+	const [R, G, B] = [luminanceChannel(r), luminanceChannel(g), luminanceChannel(b)];
 	return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 }
 
@@ -260,12 +265,8 @@ function wcagContrastChecks(fm: DesignSystemFrontmatter): ValidationFinding[] {
 	}
 
 	// Pair text-like keys against background-like keys
-	const textKeys = Object.keys(flat).filter((k) =>
-		/^(text|foreground|fg|on(Background|Surface|Primary|Secondary)?)/i.test(k),
-	);
-	const bgKeys = Object.keys(flat).filter((k) =>
-		/^(background|bg|surface|primary|secondary)$/i.test(k),
-	);
+	const textKeys = Object.keys(flat).filter((k) => TEXT_COLOR_KEY_RE.test(k));
+	const bgKeys = Object.keys(flat).filter((k) => BACKGROUND_COLOR_KEY_RE.test(k));
 
 	for (const tk of textKeys) {
 		for (const bk of bgKeys) {
@@ -307,8 +308,8 @@ export function exportTailwindConfig(fm: DesignSystemFrontmatter): Record<string
 		}
 	}
 
-	const spacing = { ...(fm.spacing ?? {}) };
-	const borderRadius = { ...(fm.rounded ?? {}) };
+	const spacing = { ...fm.spacing };
+	const borderRadius = { ...fm.rounded };
 
 	return {
 		theme: {
@@ -367,9 +368,7 @@ export function assembleDesignSystemBlock(parsed: ParsedDesignSystem): string {
 		for (const [k, v] of Object.entries(fm.rounded)) lines.push(`- ${k}: ${v}`);
 	}
 
-	const dosDonts = parsed.sections.find((s) =>
-		/do(?:es|'s)?\s*and\s*don'?ts?/i.test(s.heading),
-	);
+	const dosDonts = parsed.sections.find((s) => DOS_DONTS_HEADING_RE.test(s.heading));
 	if (dosDonts) {
 		lines.push(`\n## Do's and Don'ts\n\n${dosDonts.body}`);
 	}

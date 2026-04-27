@@ -53,7 +53,13 @@ export type {
 	UpdateTaskInput,
 } from "./types.js";
 
-export { canTransition, allTransitions, isTerminal, STATUS_BADGE_COLORS, TERMINAL } from "./states.js";
+export {
+	canTransition,
+	allTransitions,
+	isTerminal,
+	STATUS_BADGE_COLORS,
+	TERMINAL,
+} from "./states.js";
 
 export interface TasksPluginOptions {
 	/**

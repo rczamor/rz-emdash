@@ -48,9 +48,9 @@ export function pgvectorPlugin(_options: PgVectorPluginOptions = {}): PluginDesc
 		entrypoint: "@emdash-cms/plugin-pgvector/sandbox",
 		options: {},
 		capabilities: ["read:content", "network:fetch"],
-		// network:fetch — automation actions optionally call openrouter
-		// for embedding generation
-		allowedHosts: ["localhost", "127.0.0.1", "*"],
+		// Internal plugin routes are allowed by the core HTTP layer;
+		// embeddings are requested through the configured LLM plugin.
+		allowedHosts: [],
 		adminPages: [{ path: "/pgvector", label: "Vector store", icon: "search" }],
 	};
 }

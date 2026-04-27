@@ -27,9 +27,9 @@
  * accordingly.
  */
 
-import { definePlugin } from "emdash";
-import type { PluginContext } from "emdash";
 import { dispatchEvent } from "@emdash-cms/plugin-automations/dispatch";
+import { definePlugin } from "emdash";
+import type { PluginContext, WhereValue } from "emdash";
 
 import { routeAdminInteraction, renderRefreshedView } from "./admin.js";
 import { canTransition, isTerminal } from "./states.js";
@@ -43,7 +43,6 @@ import type {
 	CreateTaskInput,
 	RecordCostInput,
 	Task,
-	TaskStatus,
 	TransitionTaskInput,
 	UpdateTaskInput,
 } from "./types.js";
@@ -98,11 +97,11 @@ function appendActivity(
 }
 
 async function persistTask(task: Task, ctx: PluginContext): Promise<void> {
-	await ctx.storage.tasks.put(task.id, task);
+	await ctx.storage.tasks!.put(task.id, task);
 }
 
 async function loadTask(id: string, ctx: PluginContext): Promise<Task | null> {
-	const v = await ctx.storage.tasks.get(id);
+	const v = await ctx.storage.tasks!.get(id);
 	return (v as Task | null) ?? null;
 }
 
@@ -113,7 +112,7 @@ async function createTask(input: CreateTaskInput, ctx: PluginContext): Promise<T
 		throw new Error("goal is required");
 	}
 	const id = input.id ?? newId();
-	if (await ctx.storage.tasks.exists(id)) {
+	if (await ctx.storage.tasks!.exists(id)) {
 		throw new Error(`Task with id ${id} already exists`);
 	}
 	const task: Task = {
@@ -183,14 +182,18 @@ async function transitionTask(input: TransitionTaskInput, ctx: PluginContext): P
 	const task = await loadTask(input.id, ctx);
 	if (!task) throw new Error("Not found");
 	const from = task.status;
-	const to = input.to as TaskStatus;
+	const to = input.to;
 	if (from === to) return task;
 	if (!canTransition(from, to)) {
 		throw new Error(`Cannot transition from "${from}" to "${to}"`);
 	}
 
 	task.status = to;
-	appendActivity(task, "transitioned", input.actor ?? "system", { from, to, comment: input.comment });
+	appendActivity(task, "transitioned", input.actor ?? "system", {
+		from,
+		to,
+		comment: input.comment,
+	});
 	if (input.comment) {
 		appendActivity(task, "commented", input.actor ?? "system", { text: input.comment });
 	}
@@ -279,7 +282,7 @@ async function recordCost(input: RecordCostInput, ctx: PluginContext): Promise<T
 	const billedActor = task.assignee ?? task.created_by;
 	const day = dayKey();
 	const key = dailyKey(billedActor, day);
-	const existing = (await ctx.storage.daily_cost.get(key)) as DailyCostRecord | null;
+	const existing = (await ctx.storage.daily_cost!.get(key)) as DailyCostRecord | null;
 	const next: DailyCostRecord = existing ?? {
 		day,
 		actor: billedActor,
@@ -294,9 +297,19 @@ async function recordCost(input: RecordCostInput, ctx: PluginContext): Promise<T
 	next.usd += input.usd ?? 0;
 	next.calls += 1;
 	next.updatedAt = NOW();
-	await ctx.storage.daily_cost.put(key, next);
+	await ctx.storage.daily_cost!.put(key, next);
 
-	dispatch("task:cost-recorded", { task, model: input.model, tokensIn: input.tokensIn, tokensOut: input.tokensOut, usd: input.usd }, ctx).catch(() => {});
+	dispatch(
+		"task:cost-recorded",
+		{
+			task,
+			model: input.model,
+			tokensIn: input.tokensIn,
+			tokensOut: input.tokensOut,
+			usd: input.usd,
+		},
+		ctx,
+	).catch(() => {});
 	return task;
 }
 
@@ -324,7 +337,9 @@ async function checkQuota(body: QuotaCheckBody, ctx: PluginContext): Promise<Quo
 	const taskLimit = (await ctx.kv.get<number>(QUOTA_TASK_KEY)) ?? 0;
 
 	const day = dayKey();
-	const dailyRow = (await ctx.storage.daily_cost.get(dailyKey(body.actor, day))) as DailyCostRecord | null;
+	const dailyRow = (await ctx.storage.daily_cost!.get(
+		dailyKey(body.actor, day),
+	)) as DailyCostRecord | null;
 	const dailyUsed = (dailyRow?.tokensIn ?? 0) + (dailyRow?.tokensOut ?? 0);
 	const projectedDaily = dailyUsed + (body.estimatedTokensIn ?? 0) + (body.estimatedTokensOut ?? 0);
 
@@ -365,11 +380,7 @@ async function checkQuota(body: QuotaCheckBody, ctx: PluginContext): Promise<Quo
 
 // ── Event dispatch ──────────────────────────────────────────────────────────
 
-async function dispatch(
-	source: string,
-	payload: unknown,
-	ctx: PluginContext,
-): Promise<void> {
+async function dispatch(source: string, payload: unknown, ctx: PluginContext): Promise<void> {
 	try {
 		await dispatchEvent(source, payload as Record<string, unknown>, ctx);
 	} catch (err) {
@@ -385,7 +396,7 @@ async function dispatch(
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				ctx.log.info("Tasks plugin installed");
 			},
 		},
@@ -426,14 +437,14 @@ export default definePlugin({
 				);
 				const cursor = getQueryParam(routeCtx, "cursor");
 
-				const filter: Record<string, unknown> = {};
+				const filter: Record<string, WhereValue> = {};
 				if (status) filter.status = status;
 				if (assignee) filter.assignee = assignee;
 				if (parent_id) filter.parent_id = parent_id;
 				if (target_collection) filter.target_collection = target_collection;
 
-				const result = await ctx.storage.tasks.query({
-					filter: Object.keys(filter).length > 0 ? filter : undefined,
+				const result = await ctx.storage.tasks!.query({
+					where: Object.keys(filter).length > 0 ? filter : undefined,
 					orderBy: { created_at: "desc" },
 					limit,
 					cursor,
@@ -500,7 +511,7 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const body = routeCtx.input as { id?: unknown } | null;
 				if (!body || !isValidId(body.id)) return { ok: false, error: "id required" };
-				const removed = await ctx.storage.tasks.delete(body.id);
+				const removed = await ctx.storage.tasks!.delete(body.id);
 				return { ok: true, removed };
 			},
 		},
@@ -564,14 +575,22 @@ export default definePlugin({
 					}
 					if (decision.effect.assign) {
 						await assignTask(
-							{ id: decision.effect.assign.id, assignee: decision.effect.assign.assignee, actor: "human:admin" },
+							{
+								id: decision.effect.assign.id,
+								assignee: decision.effect.assign.assignee,
+								actor: "human:admin",
+							},
 							ctx,
 						);
 						toastMessage = `Assigned to ${decision.effect.assign.assignee}`;
 					}
 					if (decision.effect.comment) {
 						await commentOnTask(
-							{ id: decision.effect.comment.id, text: decision.effect.comment.text, actor: "human:admin" },
+							{
+								id: decision.effect.comment.id,
+								text: decision.effect.comment.text,
+								actor: "human:admin",
+							},
 							ctx,
 						);
 						toastMessage = "Comment posted";

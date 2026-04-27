@@ -23,11 +23,7 @@
 
 import type { PluginDescriptor } from "emdash";
 
-export type {
-	AddressFieldName,
-	AddressFieldSpec,
-	CountrySpec,
-} from "./countries.js";
+export type { AddressFieldName, AddressFieldSpec, CountrySpec } from "./countries.js";
 export type { Address, ValidationError } from "./util.js";
 
 export function addressPlugin(): PluginDescriptor {

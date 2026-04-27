@@ -19,8 +19,8 @@
  *   - the list of tool invocations performed
  */
 
-import type { PluginContext } from "emdash";
 import { dispatchEvent } from "@emdash-cms/plugin-automations/dispatch";
+import type { PluginContext } from "emdash";
 
 import {
 	chatCompletion,
@@ -30,6 +30,8 @@ import {
 	type ChatToolCall,
 	type OpenRouterConfig,
 } from "./client.js";
+
+const TRAILING_SLASH_RE = /\/$/;
 
 const DEFAULT_MAX_ITERATIONS = 8;
 
@@ -62,9 +64,13 @@ export interface RunChatLoopResult {
 	terminated: "complete" | "max_iterations" | "error";
 }
 
-function siteUrlFor(input: RunChatLoopInput, ctx: PluginContext): string {
-	if (input.siteUrl) return input.siteUrl.replace(/\/$/, "");
-	return (((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321") as string).replace(/\/$/, "");
+/** @internal — exported for unit tests. */
+export function siteUrlFor(input: RunChatLoopInput, ctx: PluginContext): string {
+	if (input.siteUrl) return input.siteUrl.replace(TRAILING_SLASH_RE, "");
+	return ((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(
+		TRAILING_SLASH_RE,
+		"",
+	);
 }
 
 async function recordCostOnTask(
@@ -99,6 +105,7 @@ async function recordCostOnTask(
 async function invokeOneTool(
 	toolCall: ChatToolCall,
 	taskId: string | undefined,
+	agentId: string | undefined,
 	siteUrl: string,
 	ctx: PluginContext,
 ): Promise<ToolInvocation> {
@@ -130,6 +137,7 @@ async function invokeOneTool(
 				name: toolCall.function.name,
 				arguments: parsedArgs,
 				taskId,
+				agentId,
 			}),
 		});
 		inv.durationMs = Date.now() - start;
@@ -137,7 +145,9 @@ async function invokeOneTool(
 			inv.error = `tools.invoke returned ${res.status}`;
 			return inv;
 		}
-		const json = (await res.json()) as { data?: { ok?: boolean; output?: unknown; error?: string } };
+		const json = (await res.json()) as {
+			data?: { ok?: boolean; output?: unknown; error?: string };
+		};
 		const data = json.data ?? {};
 		if (data.ok === false) {
 			inv.error = data.error ?? "Unknown error";
@@ -155,7 +165,11 @@ async function invokeOneTool(
  * never blocks the chat loop — the tracer is observability, not a
  * critical path.
  */
-function dispatch(source: string, payload: Record<string, unknown>, ctx: PluginContext): Promise<void> {
+function dispatch(
+	source: string,
+	payload: Record<string, unknown>,
+	ctx: PluginContext,
+): Promise<void> {
 	return dispatchEvent(source, payload, ctx).catch((err) => {
 		ctx.log.warn("OpenRouter: llm event dispatch failed", {
 			source,
@@ -164,7 +178,8 @@ function dispatch(source: string, payload: Record<string, unknown>, ctx: PluginC
 	});
 }
 
-function toolResultMessage(inv: ToolInvocation): ChatMessage {
+/** @internal — exported for unit tests. */
+export function toolResultMessage(inv: ToolInvocation): ChatMessage {
 	const content = inv.error
 		? JSON.stringify({ ok: false, error: inv.error })
 		: JSON.stringify(inv.output ?? null);
@@ -191,16 +206,20 @@ export async function runChatLoop(
 		const callStart = Date.now();
 		// Provider-agnostic event so tracers (Langfuse, Helicone, etc.) can
 		// subscribe via routine without coupling back to OpenRouter.
-		void dispatch("llm:call-started", {
-			provider: "openrouter",
-			model: input.completionInput.model,
-			messages: history,
-			tools: input.completionInput.tools,
-			taskId: input.taskId,
-			agentId: input.agentId,
-			iteration: i,
-			startedAt: new Date(callStart).toISOString(),
-		}, ctx);
+		void dispatch(
+			"llm:call-started",
+			{
+				provider: "openrouter",
+				model: input.completionInput.model,
+				messages: history,
+				tools: input.completionInput.tools,
+				taskId: input.taskId,
+				agentId: input.agentId,
+				iteration: i,
+				startedAt: new Date(callStart).toISOString(),
+			},
+			ctx,
+		);
 
 		let response: ChatCompletionResponse;
 		try {
@@ -214,15 +233,19 @@ export async function runChatLoop(
 				iteration: i,
 				error: errMsg,
 			});
-			void dispatch("llm:call-failed", {
-				provider: "openrouter",
-				model: input.completionInput.model,
-				taskId: input.taskId,
-				agentId: input.agentId,
-				iteration: i,
-				error: errMsg,
-				durationMs: Date.now() - callStart,
-			}, ctx);
+			void dispatch(
+				"llm:call-failed",
+				{
+					provider: "openrouter",
+					model: input.completionInput.model,
+					taskId: input.taskId,
+					agentId: input.agentId,
+					iteration: i,
+					error: errMsg,
+					durationMs: Date.now() - callStart,
+				},
+				ctx,
+			);
 			terminated = "error";
 			break;
 		}
@@ -247,24 +270,28 @@ export async function runChatLoop(
 		// request/response/usage trio. Payload shape is provider-agnostic
 		// — Langfuse routines use this directly, LiteLLM-based gateways
 		// would emit the same event.
-		void dispatch("llm:call-finished", {
-			provider: "openrouter",
-			model: input.completionInput.model,
-			input: history,
-			output: response.choices[0]?.message,
-			usage: response.usage
-				? {
-						input: response.usage.prompt_tokens,
-						output: response.usage.completion_tokens,
-						total: response.usage.total_tokens,
-					}
-				: undefined,
-			taskId: input.taskId,
-			agentId: input.agentId,
-			iteration: i,
-			durationMs: Date.now() - callStart,
-			finishReason: response.choices[0]?.finish_reason,
-		}, ctx);
+		void dispatch(
+			"llm:call-finished",
+			{
+				provider: "openrouter",
+				model: input.completionInput.model,
+				input: history,
+				output: response.choices[0]?.message,
+				usage: response.usage
+					? {
+							input: response.usage.prompt_tokens,
+							output: response.usage.completion_tokens,
+							total: response.usage.total_tokens,
+						}
+					: undefined,
+				taskId: input.taskId,
+				agentId: input.agentId,
+				iteration: i,
+				durationMs: Date.now() - callStart,
+				finishReason: response.choices[0]?.finish_reason,
+			},
+			ctx,
+		);
 
 		const message = response.choices[0]?.message;
 		if (!message) {
@@ -285,7 +312,7 @@ export async function runChatLoop(
 		// Execute each tool call in parallel. The model expects all
 		// tool_call_ids to be answered before resubmission.
 		const results = await Promise.all(
-			message.tool_calls.map((tc) => invokeOneTool(tc, input.taskId, siteUrl, ctx)),
+			message.tool_calls.map((tc) => invokeOneTool(tc, input.taskId, input.agentId, siteUrl, ctx)),
 		);
 		invocations.push(...results);
 		for (const inv of results) {

@@ -11,7 +11,7 @@ export function lookupPath(path: string, root: Record<string, unknown>): unknown
 	let current: unknown = root;
 	for (const key of parts) {
 		if (current == null) return undefined;
-		if (typeof current === "object" && key in (current as object)) {
+		if (typeof current === "object" && key in current) {
 			current = (current as Record<string, unknown>)[key];
 		} else {
 			return undefined;
@@ -29,8 +29,8 @@ function deepEqual(a: unknown, b: unknown): boolean {
 		return a.every((v, i) => deepEqual(v, b[i]));
 	}
 	if (typeof a === "object" && typeof b === "object") {
-		const ak = Object.keys(a as object);
-		const bk = Object.keys(b as object);
+		const ak = Object.keys(a);
+		const bk = Object.keys(b);
 		if (ak.length !== bk.length) return false;
 		return ak.every((k) =>
 			deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),

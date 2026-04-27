@@ -82,88 +82,47 @@ describe("resolveTokens — dynamic paths", () => {
 });
 
 describe("resolveTokens — built-in formatters", () => {
-	it("upper", async () => {
-		expect(await resolveTokens("{name|upper}", { name: "ada" })).toBe("ADA");
-	});
-
-	it("lower", async () => {
-		expect(await resolveTokens("{name|lower}", { name: "ADA" })).toBe("ada");
-	});
-
-	it("trim", async () => {
-		expect(await resolveTokens("{name|trim}", { name: "  ada  " })).toBe("ada");
-	});
-
-	it("default uses fallback when value missing", async () => {
-		expect(await resolveTokens("{missing|default:N/A}", {})).toBe("N/A");
-	});
-
-	it("default does not override present value", async () => {
-		expect(await resolveTokens("{name|default:N/A}", { name: "Ada" })).toBe("Ada");
-	});
-
-	it("default uses fallback when value is empty string", async () => {
-		expect(await resolveTokens("{name|default:N/A}", { name: "" })).toBe("N/A");
-	});
-
-	it("truncate cuts to N chars and adds ellipsis", async () => {
-		expect(await resolveTokens("{long|truncate:10}", { long: "abcdefghijk" })).toBe("abcdefghij…");
-	});
-
-	it("truncate leaves shorter strings alone", async () => {
-		expect(await resolveTokens("{short|truncate:10}", { short: "hi" })).toBe("hi");
-	});
-
-	it("truncate uses default of 100 when arg missing", async () => {
-		const long = "a".repeat(200);
-		const out = await resolveTokens("{long|truncate}", { long });
-		expect(out).toBe("a".repeat(100) + "…");
-	});
-
-	it("date with explicit format", async () => {
-		const out = await resolveTokens("{when|date:YYYY-MM-DD}", {
-			when: new Date("2026-04-15T12:00:00Z"),
-		});
-		expect(out).toBe("2026-04-15");
-	});
-
-	it("date with all format tokens", async () => {
-		const out = await resolveTokens("{when|date:YYYY-MM-DD HH:mm:ss}", {
-			when: new Date("2026-04-15T12:34:56Z"),
-		});
-		expect(out).toBe("2026-04-15 12:34:56");
-	});
-
-	it("date accepts ISO strings", async () => {
-		expect(
-			await resolveTokens("{when|date:YYYY}", { when: "2026-04-15T00:00:00Z" }),
-		).toBe("2026");
-	});
-
-	it("date returns input unchanged when not a valid date", async () => {
-		const out = await resolveTokens("{when|date:YYYY}", { when: "not-a-date" });
-		expect(out).toBe("not-a-date");
-	});
-
-	it("slug normalises to kebab-case ascii", async () => {
-		expect(await resolveTokens("{name|slug}", { name: "Hello World!" })).toBe("hello-world");
-	});
-
-	it("slug strips diacritics", async () => {
-		expect(await resolveTokens("{name|slug}", { name: "Café Résumé" })).toBe("cafe-resume");
-	});
-
-	it("slug collapses repeated separators", async () => {
-		expect(await resolveTokens("{name|slug}", { name: "a---b!!!c" })).toBe("a-b-c");
-	});
-
-	it("slug strips leading/trailing separators", async () => {
-		expect(await resolveTokens("{name|slug}", { name: "---hello---" })).toBe("hello");
-	});
-
-	it("json stringifies an object value", async () => {
-		const out = await resolveTokens("{user|json}", { user: { id: 1 } });
-		expect(out).toBe('{"id":1}');
+	it.each<[string, string, Record<string, unknown>, string]>([
+		["upper", "{name|upper}", { name: "ada" }, "ADA"],
+		["lower", "{name|lower}", { name: "ADA" }, "ada"],
+		["trim", "{name|trim}", { name: "  ada  " }, "ada"],
+		["default — fallback when missing", "{missing|default:N/A}", {}, "N/A"],
+		["default — fallback when empty string", "{name|default:N/A}", { name: "" }, "N/A"],
+		["default — present value passes through", "{name|default:N/A}", { name: "Ada" }, "Ada"],
+		["truncate — cuts + ellipsis", "{long|truncate:10}", { long: "abcdefghijk" }, "abcdefghij…"],
+		["truncate — short input untouched", "{short|truncate:10}", { short: "hi" }, "hi"],
+		[
+			"truncate — default 100 when arg missing",
+			"{long|truncate}",
+			{ long: "a".repeat(200) },
+			"a".repeat(100) + "…",
+		],
+		[
+			"date — explicit format",
+			"{when|date:YYYY-MM-DD}",
+			{ when: new Date("2026-04-15T12:00:00Z") },
+			"2026-04-15",
+		],
+		[
+			"date — full format tokens",
+			"{when|date:YYYY-MM-DD HH:mm:ss}",
+			{ when: new Date("2026-04-15T12:34:56Z") },
+			"2026-04-15 12:34:56",
+		],
+		["date — ISO string input", "{when|date:YYYY}", { when: "2026-04-15T00:00:00Z" }, "2026"],
+		[
+			"date — invalid input passes through",
+			"{when|date:YYYY}",
+			{ when: "not-a-date" },
+			"not-a-date",
+		],
+		["slug — kebab ascii", "{name|slug}", { name: "Hello World!" }, "hello-world"],
+		["slug — strips diacritics", "{name|slug}", { name: "Café Résumé" }, "cafe-resume"],
+		["slug — collapses runs", "{name|slug}", { name: "a---b!!!c" }, "a-b-c"],
+		["slug — trims edges", "{name|slug}", { name: "---hello---" }, "hello"],
+		["json — stringifies object", "{user|json}", { user: { id: 1 } }, '{"id":1}'],
+	])("%s", async (_, template, ctx, expected) => {
+		expect(await resolveTokens(template, ctx)).toBe(expected);
 	});
 });
 
@@ -198,7 +157,7 @@ describe("resolveTokens — custom formatters", () => {
 		const out = await resolveTokens(
 			"{name|upper}",
 			{ name: "ada" },
-			{ formatters: { upper: (v) => `*${v}*` } },
+			{ formatters: { upper: (v) => `*${typeof v === "string" ? v : ""}*` } },
 		);
 		expect(out).toBe("*ada*");
 	});

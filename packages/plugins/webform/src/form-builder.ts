@@ -50,22 +50,31 @@ interface AdminInteraction {
 }
 
 const NOW = () => new Date().toISOString();
+const FORM_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const FIELD_NAME_RE = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
+const NEWLINE_RE = /\r?\n/;
+
+function scalarString(value: unknown, fallback = ""): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	return fallback;
+}
 
 function isValidFormId(id: unknown): id is string {
-	return typeof id === "string" && /^[a-z0-9][a-z0-9-]{0,63}$/.test(id);
+	return typeof id === "string" && FORM_ID_RE.test(id);
 }
 
 function isValidFieldName(name: unknown): name is string {
-	return typeof name === "string" && /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(name);
+	return typeof name === "string" && FIELD_NAME_RE.test(name);
 }
 
 async function loadForm(id: string, ctx: PluginContext): Promise<FormDefinition | null> {
-	const stored = await ctx.storage.forms.get(id);
+	const stored = await ctx.storage.forms!.get(id);
 	return (stored as FormDefinition | null) ?? null;
 }
 
 async function saveForm(form: FormDefinition, ctx: PluginContext): Promise<void> {
-	await ctx.storage.forms.put(form.id, { ...form, updatedAt: NOW() });
+	await ctx.storage.forms!.put(form.id, { ...form, updatedAt: NOW() });
 }
 
 function parseDualValue(value: string | undefined): [string, string] | null {
@@ -78,7 +87,7 @@ function parseDualValue(value: string | undefined): [string, string] | null {
 function parseOptionsString(raw: unknown): Array<{ value: string; label: string }> {
 	if (typeof raw !== "string" || !raw.trim()) return [];
 	return raw
-		.split(/\r?\n/)
+		.split(NEWLINE_RE)
 		.map((line) => line.trim())
 		.filter(Boolean)
 		.map((line) => {
@@ -98,7 +107,7 @@ function renderOptionsString(options: Array<{ value: string; label: string }> | 
 // ── Views ───────────────────────────────────────────────────────────────────
 
 async function viewFormsList(ctx: PluginContext) {
-	const result = await ctx.storage.forms.query({
+	const result = await ctx.storage.forms!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 200,
 	});
@@ -119,9 +128,7 @@ async function viewFormsList(ctx: PluginContext) {
 			{ type: "header", text: "Webforms" },
 			{
 				type: "actions",
-				elements: [
-					{ type: "button", text: "+ New form", action_id: "new_form", style: "primary" },
-				],
+				elements: [{ type: "button", text: "+ New form", action_id: "new_form", style: "primary" }],
 			},
 			{
 				type: "table",
@@ -471,7 +478,8 @@ function viewFieldEditor(form: FormDefinition, field: FieldDef | null) {
 					{
 						type: "text_input",
 						action_id: "options",
-						label: "Options (one per line; 'value' or 'value=label'). Used by select / radio / checkbox-group.",
+						label:
+							"Options (one per line; 'value' or 'value=label'). Used by select / radio / checkbox-group.",
 						multiline: true,
 						initial_value: renderOptionsString(f.options),
 					},
@@ -530,12 +538,12 @@ function fieldDefFromValues(values: Record<string, unknown>): FieldDef {
 	const optionsStr = values.options;
 	const options = parseOptionsString(optionsStr);
 	const def: FieldDef = {
-		name: String(values.name ?? "").trim(),
-		type: String(values.type ?? "text") as FieldType,
-		label: String(values.label ?? "").trim(),
+		name: scalarString(values.name).trim(),
+		type: scalarString(values.type, "text") as FieldType,
+		label: scalarString(values.label).trim(),
 		required: Boolean(values.required),
-		placeholder: values.placeholder ? String(values.placeholder) : undefined,
-		helpText: values.helpText ? String(values.helpText) : undefined,
+		placeholder: values.placeholder ? scalarString(values.placeholder) : undefined,
+		helpText: values.helpText ? scalarString(values.helpText) : undefined,
 	};
 	if (minLength > 0) def.minLength = minLength;
 	if (maxLength > 0) def.maxLength = maxLength;
@@ -545,10 +553,7 @@ function fieldDefFromValues(values: Record<string, unknown>): FieldDef {
 
 // ── Top-level dispatcher ────────────────────────────────────────────────────
 
-export async function handleAdminInteraction(
-	interaction: AdminInteraction,
-	ctx: PluginContext,
-) {
+export async function handleAdminInteraction(interaction: AdminInteraction, ctx: PluginContext) {
 	// PAGE LOAD ─────────────────────────────────────────────────────────────
 	if (interaction.type === "page_load") {
 		if (interaction.page === "/forms") return await viewFormsList(ctx);
@@ -563,7 +568,7 @@ export async function handleAdminInteraction(
 
 	// WIDGET LOAD ───────────────────────────────────────────────────────────
 	if (interaction.type === "widget_load" && interaction.widget === "webform-recent") {
-		const result = await ctx.storage.submissions.query({
+		const result = await ctx.storage.submissions!.query({
 			orderBy: { createdAt: "desc" },
 			limit: 5,
 		});
@@ -601,7 +606,7 @@ export async function handleAdminInteraction(
 		}
 
 		if (aid === "delete_form" && isValidFormId(interaction.value)) {
-			await ctx.storage.forms.delete(interaction.value);
+			await ctx.storage.forms!.delete(interaction.value);
 			return {
 				...(await viewFormsList(ctx)),
 				toast: { message: `Form ${interaction.value} deleted`, type: "success" },
@@ -613,7 +618,7 @@ export async function handleAdminInteraction(
 			if (!original) return await viewFormsList(ctx);
 			let newId = `${original.id}-copy`;
 			let n = 2;
-			while (await ctx.storage.forms.exists(newId)) {
+			while (await ctx.storage.forms!.exists(newId)) {
 				newId = `${original.id}-copy-${n++}`;
 			}
 			const copy: FormDefinition = {
@@ -690,15 +695,15 @@ export async function handleAdminInteraction(
 		const values = interaction.values ?? {};
 
 		if (aid === "create_form") {
-			const id = String(values.id ?? "").trim();
-			const title = String(values.title ?? "").trim();
+			const id = scalarString(values.id).trim();
+			const title = scalarString(values.title).trim();
 			if (!isValidFormId(id)) {
 				return {
 					...viewNewForm(),
 					toast: { message: "Invalid form id (lowercase, hyphens only)", type: "error" },
 				};
 			}
-			if (await ctx.storage.forms.exists(id)) {
+			if (await ctx.storage.forms!.exists(id)) {
 				return {
 					...viewNewForm(),
 					toast: { message: "A form with that id already exists", type: "error" },
@@ -710,7 +715,7 @@ export async function handleAdminInteraction(
 			const form: FormDefinition = {
 				id,
 				title,
-				description: values.description ? String(values.description) : undefined,
+				description: values.description ? scalarString(values.description) : undefined,
 				fields: [],
 				notifications: [],
 				enabled: Boolean(values.enabled),
@@ -736,8 +741,8 @@ export async function handleAdminInteraction(
 		if (!form) return await viewFormsList(ctx);
 
 		if (verb === "save_metadata") {
-			form.title = String(values.title ?? form.title);
-			form.description = values.description ? String(values.description) : undefined;
+			form.title = scalarString(values.title, form.title);
+			form.description = values.description ? scalarString(values.description) : undefined;
 			form.enabled = Boolean(values.enabled);
 			await saveForm(form, ctx);
 			return {
@@ -764,7 +769,7 @@ export async function handleAdminInteraction(
 				form.submissionLimits = undefined;
 			}
 			form.confirmation = {
-				message: String(values.confirmation_message ?? "Thanks for your submission"),
+				message: scalarString(values.confirmation_message, "Thanks for your submission"),
 			};
 			await saveForm(form, ctx);
 			return {
@@ -817,9 +822,9 @@ export async function handleAdminInteraction(
 
 		if (verb === "create_notification") {
 			const n: NotificationConfig = {
-				to: String(values.to ?? "").trim(),
-				subject: String(values.subject ?? "").trim(),
-				body: String(values.body ?? "").trim(),
+				to: scalarString(values.to).trim(),
+				subject: scalarString(values.subject).trim(),
+				body: scalarString(values.body).trim(),
 			};
 			if (!n.to || !n.subject) {
 				return {

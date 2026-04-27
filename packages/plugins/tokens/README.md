@@ -33,10 +33,10 @@ await resolveTokens("Hello {user.name|upper}!", { user: { name: "ada" } });
 await resolveTokens("Posted {now|date:YYYY-MM-DD}", {});
 // → "Posted 2026-04-25"
 
-await resolveTokens(
-  "Subject: {form.title} — {submission.name|default:Anonymous}",
-  { form: { title: "Contact" }, submission: { name: "Ada" } },
-);
+await resolveTokens("Subject: {form.title} — {submission.name|default:Anonymous}", {
+	form: { title: "Contact" },
+	submission: { name: "Ada" },
+});
 // → "Subject: Contact — Ada"
 ```
 
@@ -54,34 +54,39 @@ await resolveTokens(
 
 These resolve without a context entry:
 
-| Path        | Value                                  |
-|-------------|----------------------------------------|
-| `{now}`     | a `Date` (use with `\|date:FMT`)       |
-| `{timestamp}` | Unix seconds                         |
-| `{uuid}`    | Random UUID v4                         |
+| Path          | Value                            |
+| ------------- | -------------------------------- |
+| `{now}`       | a `Date` (use with `\|date:FMT`) |
+| `{timestamp}` | Unix seconds                     |
+| `{uuid}`      | Random UUID v4                   |
 
 ### Built-in formatters
 
-| Formatter             | Effect |
-|-----------------------|--------|
-| `upper` / `lower` / `trim` | String case |
-| `default:fallback`    | Used when value is null/empty |
-| `truncate:N`          | Truncate to N chars + `…` |
-| `date:FORMAT`         | Format a Date or ISO string. Format tokens: `YYYY MM DD HH mm ss` |
-| `slug`                | Kebab-case ascii slug |
-| `json`                | `JSON.stringify` |
+| Formatter                  | Effect                                                            |
+| -------------------------- | ----------------------------------------------------------------- |
+| `upper` / `lower` / `trim` | String case                                                       |
+| `default:fallback`         | Used when value is null/empty                                     |
+| `truncate:N`               | Truncate to N chars + `…`                                         |
+| `date:FORMAT`              | Format a Date or ISO string. Format tokens: `YYYY MM DD HH mm ss` |
+| `slug`                     | Kebab-case ascii slug                                             |
+| `json`                     | `JSON.stringify`                                                  |
 
 ### Custom formatters
 
 ```ts
-await resolveTokens("Price: {price|currency:USD}", { price: 99.95 }, {
-  formatters: {
-    currency: (v, code) => new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: code ?? "USD",
-    }).format(Number(v)),
-  },
-});
+await resolveTokens(
+	"Price: {price|currency:USD}",
+	{ price: 99.95 },
+	{
+		formatters: {
+			currency: (v, code) =>
+				new Intl.NumberFormat("en-US", {
+					style: "currency",
+					currency: code ?? "USD",
+				}).format(Number(v)),
+		},
+	},
+);
 // → "Price: $99.95"
 ```
 

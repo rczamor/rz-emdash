@@ -1,3 +1,4 @@
+const TRAILING_SLASH_RE = /\/$/;
 /**
  * LLM Router client — fetch wrappers consumed by other plugins.
  */
@@ -10,7 +11,7 @@ interface ClientOptions {
 }
 
 function urlFor(path: string, options: ClientOptions): string {
-	return (options.baseUrl ?? "").replace(/\/$/, "") + `${BASE}${path}`;
+	return (options.baseUrl ?? "").replace(TRAILING_SLASH_RE, "") + `${BASE}${path}`;
 }
 
 export interface RouterStatus {
@@ -40,14 +41,22 @@ export async function chat(
 		body: JSON.stringify(body),
 	});
 	if (!res.ok) return { ok: false, error: `chat returned ${res.status}` };
-	const json = (await res.json()) as { data?: { ok?: boolean; response?: unknown; error?: string } };
-	return json.data ?? { ok: false, error: "Empty response" };
+	const json = (await res.json()) as {
+		data?: { ok?: boolean; response?: unknown; error?: string };
+	};
+	const data = json.data;
+	if (!data) return { ok: false, error: "Empty response" };
+	return { ...data, ok: data.ok === true };
 }
 
 export async function embed(
 	body: { input: string | string[]; model?: string },
 	options: ClientOptions = {},
-): Promise<{ ok: boolean; response?: { data?: Array<{ embedding: number[] }>; model: string }; error?: string }> {
+): Promise<{
+	ok: boolean;
+	response?: { data?: Array<{ embedding: number[] }>; model: string };
+	error?: string;
+}> {
 	const fetchImpl = options.fetch ?? globalThis.fetch;
 	const res = await fetchImpl(urlFor("/embeddings", options), {
 		method: "POST",
@@ -56,7 +65,13 @@ export async function embed(
 	});
 	if (!res.ok) return { ok: false, error: `embeddings returned ${res.status}` };
 	const json = (await res.json()) as {
-		data?: { ok?: boolean; response?: { data?: Array<{ embedding: number[] }>; model: string }; error?: string };
+		data?: {
+			ok?: boolean;
+			response?: { data?: Array<{ embedding: number[] }>; model: string };
+			error?: string;
+		};
 	};
-	return json.data ?? { ok: false, error: "Empty response" };
+	const data = json.data;
+	if (!data) return { ok: false, error: "Empty response" };
+	return { ...data, ok: data.ok === true };
 }

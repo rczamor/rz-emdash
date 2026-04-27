@@ -145,7 +145,8 @@ export const COUNTRIES: Record<string, CountrySpec> = {
 		],
 		subdivisions: toSubdivisions(US_STATES),
 		postalCodePattern: "^[0-9]{5}(-[0-9]{4})?$",
-		format: "%recipient\n%addressLine1\n%addressLine2\n%locality, %administrativeArea %postalCode\n%country",
+		format:
+			"%recipient\n%addressLine1\n%addressLine2\n%locality, %administrativeArea %postalCode\n%country",
 	},
 	CA: {
 		code: "CA",
@@ -157,7 +158,8 @@ export const COUNTRIES: Record<string, CountrySpec> = {
 		],
 		subdivisions: toSubdivisions(CA_PROVINCES),
 		postalCodePattern: "^[A-Za-z][0-9][A-Za-z][ ]?[0-9][A-Za-z][0-9]$",
-		format: "%recipient\n%addressLine1\n%addressLine2\n%locality %administrativeArea %postalCode\n%country",
+		format:
+			"%recipient\n%addressLine1\n%addressLine2\n%locality %administrativeArea %postalCode\n%country",
 	},
 	GB: {
 		code: "GB",
@@ -180,7 +182,8 @@ export const COUNTRIES: Record<string, CountrySpec> = {
 		],
 		subdivisions: toSubdivisions(AU_STATES),
 		postalCodePattern: "^[0-9]{4}$",
-		format: "%recipient\n%addressLine1\n%addressLine2\n%locality %administrativeArea %postalCode\n%country",
+		format:
+			"%recipient\n%addressLine1\n%addressLine2\n%locality %administrativeArea %postalCode\n%country",
 	},
 	DE: {
 		code: "DE",
@@ -211,7 +214,8 @@ export const COUNTRIES: Record<string, CountrySpec> = {
 			{ name: "administrativeArea", label: "Province" },
 		],
 		postalCodePattern: "^[0-9]{5}$",
-		format: "%recipient\n%addressLine1\n%addressLine2\n%postalCode %locality %administrativeArea\n%country",
+		format:
+			"%recipient\n%addressLine1\n%addressLine2\n%postalCode %locality %administrativeArea\n%country",
 	},
 	IT: {
 		code: "IT",
@@ -222,7 +226,8 @@ export const COUNTRIES: Record<string, CountrySpec> = {
 			{ name: "administrativeArea", label: "Province" },
 		],
 		postalCodePattern: "^[0-9]{5}$",
-		format: "%recipient\n%addressLine1\n%addressLine2\n%postalCode %locality %administrativeArea\n%country",
+		format:
+			"%recipient\n%addressLine1\n%addressLine2\n%postalCode %locality %administrativeArea\n%country",
 	},
 	JP: {
 		code: "JP",
@@ -236,7 +241,8 @@ export const COUNTRIES: Record<string, CountrySpec> = {
 			{ name: "addressLine2", label: "Building / floor" },
 		],
 		postalCodePattern: "^[0-9]{3}-?[0-9]{4}$",
-		format: "%postalCode\n%administrativeArea %locality\n%addressLine1\n%addressLine2\n%recipient\n%country",
+		format:
+			"%postalCode\n%administrativeArea %locality\n%addressLine1\n%addressLine2\n%recipient\n%country",
 	},
 	MX: {
 		code: "MX",
@@ -247,7 +253,8 @@ export const COUNTRIES: Record<string, CountrySpec> = {
 			{ name: "postalCode", label: "C.P.", required: true },
 		],
 		postalCodePattern: "^[0-9]{5}$",
-		format: "%recipient\n%addressLine1\n%addressLine2\n%locality, %administrativeArea %postalCode\n%country",
+		format:
+			"%recipient\n%addressLine1\n%addressLine2\n%locality, %administrativeArea %postalCode\n%country",
 	},
 };
 

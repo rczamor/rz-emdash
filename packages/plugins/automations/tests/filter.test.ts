@@ -108,27 +108,25 @@ describe("evaluateFilter — primitive operators", () => {
 	});
 
 	it("gt / gte / lt / lte on numbers", () => {
-		expect(
-			evaluateFilter({ gt: { path: "event.content.wordCount", value: 100 } }, event),
-		).toBe(true);
-		expect(
-			evaluateFilter({ gt: { path: "event.content.wordCount", value: 250 } }, event),
-		).toBe(false);
-		expect(
-			evaluateFilter({ gte: { path: "event.content.wordCount", value: 250 } }, event),
-		).toBe(true);
-		expect(
-			evaluateFilter({ lt: { path: "event.content.wordCount", value: 251 } }, event),
-		).toBe(true);
-		expect(
-			evaluateFilter({ lte: { path: "event.content.wordCount", value: 250 } }, event),
-		).toBe(true);
+		expect(evaluateFilter({ gt: { path: "event.content.wordCount", value: 100 } }, event)).toBe(
+			true,
+		);
+		expect(evaluateFilter({ gt: { path: "event.content.wordCount", value: 250 } }, event)).toBe(
+			false,
+		);
+		expect(evaluateFilter({ gte: { path: "event.content.wordCount", value: 250 } }, event)).toBe(
+			true,
+		);
+		expect(evaluateFilter({ lt: { path: "event.content.wordCount", value: 251 } }, event)).toBe(
+			true,
+		);
+		expect(evaluateFilter({ lte: { path: "event.content.wordCount", value: 250 } }, event)).toBe(
+			true,
+		);
 	});
 
 	it("numeric comparators return false on non-number values", () => {
-		expect(
-			evaluateFilter({ gt: { path: "event.content.title", value: 1 } }, event),
-		).toBe(false);
+		expect(evaluateFilter({ gt: { path: "event.content.title", value: 1 } }, event)).toBe(false);
 	});
 
 	it("exists returns true for any defined value (including null)", () => {
@@ -212,5 +210,71 @@ describe("evaluateFilter — composition", () => {
 
 	it("empty any-list is vacuously false", () => {
 		expect(evaluateFilter({ any: [] }, event)).toBe(false);
+	});
+
+	it("depth-3 nesting: all → any → not", () => {
+		const f: Filter = {
+			all: [
+				{ eq: { path: "event.collection", value: "posts" } },
+				{
+					any: [
+						{ eq: { path: "event.content.featured", value: false } },
+						{ not: { lt: { path: "event.content.wordCount", value: 50 } } },
+					],
+				},
+			],
+		};
+		expect(evaluateFilter(f, event)).toBe(true);
+	});
+
+	it("depth-3 nesting fails when innermost branch contradicts", () => {
+		const f: Filter = {
+			any: [
+				{ all: [{ eq: { path: "event.collection", value: "x" } }] },
+				{ all: [{ not: { eq: { path: "event.content.featured", value: true } } }] },
+			],
+		};
+		expect(evaluateFilter(f, event)).toBe(false);
+	});
+});
+
+describe("evaluateFilter — combinator result semantics", () => {
+	const event = { event: { collection: "posts", content: { wordCount: 100 } } };
+
+	// The Filter shape is pure JSON — we can't inject a closure-counted child
+	// to *observe* short-circuit traversal. These tests pin down the
+	// observable contract instead: result correctness across ordering
+	// permutations. If a future implementation drops short-circuit it must
+	// still produce these answers, and any side-effect short-circuit
+	// assertion would belong in an instrumentation test on the impl itself.
+	it("`all` returns false when the first child fails (later children irrelevant)", () => {
+		const f: Filter = {
+			all: [
+				{ eq: { path: "event.collection", value: "wrong" } },
+				{ eq: { path: "event.collection", value: "posts" } },
+			],
+		};
+		expect(evaluateFilter(f, event)).toBe(false);
+	});
+
+	it("`any` returns true when the first child matches (later children irrelevant)", () => {
+		const f: Filter = {
+			any: [
+				{ eq: { path: "event.collection", value: "posts" } },
+				{ eq: { path: "event.collection", value: "also-wrong" } },
+			],
+		};
+		expect(evaluateFilter(f, event)).toBe(true);
+	});
+
+	it("`all` walks every child when each one passes", () => {
+		const f: Filter = {
+			all: [
+				{ eq: { path: "event.collection", value: "posts" } },
+				{ gt: { path: "event.content.wordCount", value: 50 } },
+				{ exists: { path: "event.content.wordCount" } },
+			],
+		};
+		expect(evaluateFilter(f, event)).toBe(true);
 	});
 });

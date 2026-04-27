@@ -146,7 +146,15 @@ colors:
 	});
 
 	it("recognises spec-known sections without info findings", () => {
-		const known = ["Overview", "Colors", "Typography", "Layout", "Elevation", "Shapes", "Components"];
+		const known = [
+			"Overview",
+			"Colors",
+			"Typography",
+			"Layout",
+			"Elevation",
+			"Shapes",
+			"Components",
+		];
 		const src = known.map((h) => `## ${h}\n\nbody\n`).join("\n");
 		const parsed = parseDesignSystem(`---\nname: X\n---\n\n${src}`);
 		const report = validateDesignSystem(parsed);
@@ -272,8 +280,7 @@ describe("exportTailwindConfig", () => {
 });
 
 describe("assembleDesignSystemBlock", () => {
-	it("produces a markdown block with name + colors + typography", () => {
-		const parsed = parseDesignSystem(`---
+	const fullSrc = `---
 name: EmDash
 description: Plain language.
 colors:
@@ -287,13 +294,21 @@ typography:
 
 - ✅ Lead with the work
 - ❌ Hero gradients
-`);
-		const block = assembleDesignSystemBlock(parsed);
+`;
+
+	it("produces a markdown block with name + colors + typography", () => {
+		const block = assembleDesignSystemBlock(parseDesignSystem(fullSrc));
 		expect(block).toContain("# Design system: EmDash");
 		expect(block).toContain("Plain language.");
 		expect(block).toContain("**primary**: #ff6600");
 		expect(block).toContain("Inter");
 		expect(block).toContain("Lead with the work");
+	});
+
+	// Snapshot — locks ordering so a regression in section emit order
+	// (e.g. typography rendered before colors) is visible at a glance.
+	it("matches full markdown snapshot", () => {
+		expect(assembleDesignSystemBlock(parseDesignSystem(fullSrc))).toMatchSnapshot();
 	});
 
 	it("omits sections that aren't present", () => {

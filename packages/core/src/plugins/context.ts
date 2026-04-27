@@ -119,7 +119,7 @@ function createStorageCollection<T>(
 		// Query returns PaginatedResult instead of the old format
 		async query(options?: QueryOptions): Promise<PaginatedResult<{ id: string; data: T }>> {
 			const result = await repo.query({
-				where: options?.where,
+				where: options?.where ?? options?.filter,
 				orderBy: options?.orderBy,
 				limit: options?.limit,
 				cursor: options?.cursor,
@@ -513,6 +513,36 @@ export function createMediaAccessWithWrite(
 
 /** Maximum number of redirects to follow in plugin HTTP access */
 const MAX_PLUGIN_REDIRECTS = 5;
+const INTERNAL_PLUGIN_TOKEN_HEADER = "X-EmDash-Internal-Plugin";
+const INTERNAL_PLUGIN_FROM_HEADER = "X-EmDash-Internal-Plugin-From";
+const INTERNAL_PLUGIN_TOKEN_STATE = Symbol.for("emdash.internalPluginRequestToken");
+
+interface InternalPluginTokenState {
+	token?: string;
+}
+
+type InternalPluginTokenGlobal = typeof globalThis & {
+	[INTERNAL_PLUGIN_TOKEN_STATE]?: InternalPluginTokenState;
+};
+
+function getInternalPluginTokenState(): InternalPluginTokenState {
+	const global = globalThis as InternalPluginTokenGlobal;
+	global[INTERNAL_PLUGIN_TOKEN_STATE] ??= {};
+	return global[INTERNAL_PLUGIN_TOKEN_STATE];
+}
+
+export function getInternalPluginRequestToken(): string {
+	const state = getInternalPluginTokenState();
+	state.token ??=
+		typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+			? crypto.randomUUID()
+			: `internal_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+	return state.token;
+}
+
+export function isInternalPluginRequest(request: Request): boolean {
+	return request.headers.get(INTERNAL_PLUGIN_TOKEN_HEADER) === getInternalPluginRequestToken();
+}
 
 /**
  * Check if a hostname matches any pattern in the allowed list.
@@ -531,37 +561,106 @@ function isHostAllowed(host: string, allowedHosts: string[]): boolean {
 	});
 }
 
+function isInternalPluginApiUrl(url: URL, internalOrigin: string): boolean {
+	return url.origin === internalOrigin && url.pathname.startsWith("/_emdash/api/plugins/");
+}
+
+function normalizeOrigin(origin: string): string {
+	try {
+		return new URL(origin).origin;
+	} catch {
+		return origin.replace(TRAILING_SLASH_RE, "");
+	}
+}
+
+function withInternalPluginHeaders(pluginId: string, init?: RequestInit): RequestInit {
+	const headers = new Headers(init?.headers);
+	headers.set(INTERNAL_PLUGIN_TOKEN_HEADER, getInternalPluginRequestToken());
+	headers.set(INTERNAL_PLUGIN_FROM_HEADER, pluginId);
+	headers.set("X-EmDash-Request", "1");
+	return { ...init, headers };
+}
+
+function getFetchInput(
+	input: string | URL | Request,
+	init?: RequestInit,
+): {
+	url: string;
+	init?: RequestInit;
+} {
+	if (typeof input === "string") return { url: input, init };
+	if (input instanceof URL) return { url: input.href, init };
+	return {
+		url: input.url,
+		init: {
+			method: input.method,
+			headers: init?.headers ?? input.headers,
+			body: input.body,
+			referrer: input.referrer,
+			referrerPolicy: input.referrerPolicy,
+			mode: input.mode,
+			credentials: input.credentials,
+			cache: input.cache,
+			redirect: input.redirect,
+			integrity: input.integrity,
+			keepalive: input.keepalive,
+			signal: input.signal,
+			...init,
+		},
+	};
+}
+
 /**
  * Create HTTP access with host validation.
  *
  * Uses redirect: "manual" to re-validate each redirect target against
  * the allowedHosts list, preventing redirects to unauthorized hosts.
  */
-export function createHttpAccess(pluginId: string, allowedHosts: string[]): HttpAccess {
+export function createHttpAccess(
+	pluginId: string,
+	allowedHosts: string[],
+	internalOrigin = "http://localhost:4321",
+): HttpAccess {
+	const normalizedInternalOrigin = normalizeOrigin(internalOrigin);
 	return {
-		async fetch(url: string, init?: RequestInit): Promise<Response> {
-			// Deny by default — plugins must declare allowed hosts
-			if (allowedHosts.length === 0) {
-				throw new Error(
-					`Plugin "${pluginId}" has no allowed hosts configured. ` +
-						`Add hosts to the plugin's allowedHosts array to enable HTTP requests.`,
-				);
-			}
-
-			let currentUrl = url;
-			let currentInit = init;
+		async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+			const fetchInput = getFetchInput(input, init);
+			let currentUrl = fetchInput.url;
+			let currentInit = fetchInput.init;
 
 			for (let i = 0; i <= MAX_PLUGIN_REDIRECTS; i++) {
-				const hostname = new URL(currentUrl).hostname;
-				if (!isHostAllowed(hostname, allowedHosts)) {
+				const parsed = new URL(currentUrl);
+				const hostname = parsed.hostname;
+				const isInternalPluginUrl = isInternalPluginApiUrl(parsed, normalizedInternalOrigin);
+				if (!isInternalPluginUrl && allowedHosts.length === 0) {
+					throw new Error(
+						`Plugin "${pluginId}" has no allowed hosts configured. ` +
+							`Add hosts to the plugin's allowedHosts array to enable external HTTP requests.`,
+					);
+				}
+				if (!isInternalPluginUrl && !isHostAllowed(hostname, allowedHosts)) {
 					throw new Error(
 						`Plugin "${pluginId}" is not allowed to fetch from host "${hostname}". ` +
 							`Allowed hosts: ${allowedHosts.join(", ")}`,
 					);
 				}
+				// Resolve-and-validate runs for every external URL — not just
+				// wildcard allowlists — so DNS rebinding or compromised
+				// authoritative DNS on an explicitly allowed host can't pivot
+				// to a private IP.
+				if (!isInternalPluginUrl) {
+					try {
+						await resolveAndValidateExternalUrl(currentUrl);
+					} catch (e) {
+						const msg = e instanceof SsrfError ? e.message : "SSRF validation failed";
+						throw new Error(`Plugin "${pluginId}": blocked fetch to "${hostname}": ${msg}`, {
+							cause: e,
+						});
+					}
+				}
 
 				const response = await globalThis.fetch(currentUrl, {
-					...currentInit,
+					...(isInternalPluginUrl ? withInternalPluginHeaders(pluginId, currentInit) : currentInit),
 					redirect: "manual",
 				});
 
@@ -598,9 +697,10 @@ export function createHttpAccess(pluginId: string, allowedHosts: string[]): Http
  */
 export function createUnrestrictedHttpAccess(pluginId: string): HttpAccess {
 	return {
-		async fetch(url: string, init?: RequestInit): Promise<Response> {
-			let currentUrl = url;
-			let currentInit = init;
+		async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+			const fetchInput = getFetchInput(input, init);
+			let currentUrl = fetchInput.url;
+			let currentInit = fetchInput.init;
 
 			for (let i = 0; i <= MAX_PLUGIN_REDIRECTS; i++) {
 				// Validate each URL against SSRF rules (private IPs, metadata
@@ -922,7 +1022,11 @@ export class PluginContextFactory {
 		if (capabilities.has("network:fetch:any")) {
 			http = createUnrestrictedHttpAccess(plugin.id);
 		} else if (capabilities.has("network:fetch")) {
-			http = createHttpAccess(plugin.id, plugin.allowedHosts);
+			http = createHttpAccess(
+				plugin.id,
+				plugin.allowedHosts,
+				this.site.url || "http://localhost:4321",
+			);
 		}
 
 		// Capability-gated: users

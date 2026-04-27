@@ -11,9 +11,7 @@ partitioned by `agent_id`, model preferences, quota overrides.
 import { agentsPlugin } from "@emdash-cms/plugin-agents";
 
 export default defineConfig({
-  integrations: [
-    emdash({ plugins: [agentsPlugin()] }),
-  ],
+	integrations: [emdash({ plugins: [agentsPlugin()] })],
 });
 ```
 
@@ -21,23 +19,23 @@ export default defineConfig({
 
 ```ts
 interface Agent {
-  id: string;          // slug — referenced by tasks as "agent:<id>"
-  name: string;
-  role: string;        // "Writer", "Editor", "Researcher", …
-  active: boolean;
+	id: string; // slug — referenced by tasks as "agent:<id>"
+	name: string;
+	role: string; // "Writer", "Editor", "Researcher", …
+	active: boolean;
 
-  // Identity-as-files (OpenClaw pattern)
-  identity: string;          // markdown — IDENTITY.md content
-  soul?: string;             // markdown — values, voice; SOUL.md
-  tools_md?: string;         // markdown — env-specific notes; TOOLS.md
+	// Identity-as-files (OpenClaw pattern)
+	identity: string; // markdown — IDENTITY.md content
+	soul?: string; // markdown — values, voice; SOUL.md
+	tools_md?: string; // markdown — env-specific notes; TOOLS.md
 
-  model: { primary: string; fallback?: string; temperature?: number; maxTokens?: number };
+	model: { primary: string; fallback?: string; temperature?: number; maxTokens?: number };
 
-  skills: string[];          // slugs in the agent_skills content collection
-  tools: string[];           // tool names from the Tools plugin / MCP catalog
-  skills_collection?: string; // default "agent_skills"
+	skills: string[]; // slugs in the agent_skills content collection
+	tools: string[]; // tool names from the Tools plugin / MCP catalog
+	skills_collection?: string; // default "agent_skills"
 
-  quotas?: { dailyTokens?: number; taskTokens?: number; dailyCalls?: number };
+	quotas?: { dailyTokens?: number; taskTokens?: number; dailyCalls?: number };
 }
 ```
 
@@ -53,13 +51,13 @@ Recommended seed entry for the collection:
 
 ```json
 {
-  "slug": "agent_skills",
-  "label": "Agent skills",
-  "fields": [
-    { "slug": "title", "label": "Name", "type": "string", "required": true },
-    { "slug": "description", "label": "Trigger description", "type": "text" },
-    { "slug": "body", "label": "Skill body", "type": "portableText" }
-  ]
+	"slug": "agent_skills",
+	"label": "Agent skills",
+	"fields": [
+		{ "slug": "title", "label": "Name", "type": "string", "required": true },
+		{ "slug": "description", "label": "Trigger description", "type": "text" },
+		{ "slug": "body", "label": "Skill body", "type": "portableText" }
+	]
 }
 ```
 
@@ -85,15 +83,15 @@ Partitioned by `agent_id`. The `memory` storage collection holds:
 
 ```ts
 interface MemoryEntry {
-  id: string;
-  agent_id: string;          // partition key
-  key: string;
-  value: unknown;
-  importance: number;        // 0..1
-  source?: string;           // task id, event id, …
-  tags?: string[];
-  last_accessed_at: string;
-  created_at: string;
+	id: string;
+	agent_id: string; // partition key
+	key: string;
+	value: unknown;
+	importance: number; // 0..1
+	source?: string; // task id, event id, …
+	tags?: string[];
+	last_accessed_at: string;
+	created_at: string;
 }
 ```
 

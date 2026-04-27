@@ -44,6 +44,7 @@ export interface InvokeInput {
 	name: string;
 	arguments: Record<string, unknown>;
 	taskId?: string;
+	agentId?: string;
 }
 
 export interface InvokeResult {

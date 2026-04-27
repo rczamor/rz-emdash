@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`assembleDesignSystemBlock > matches full markdown snapshot 1`] = `
+"# Design system: EmDash
+
+Plain language.
+
+## Colors
+
+- **primary**: #ff6600
+- **text**: #fff
+
+## Typography
+
+- **body**: family: Inter, size: 16px
+
+## Do's and Don'ts
+
+- ✅ Lead with the work
+- ❌ Hero gradients"
+`;

@@ -55,9 +55,9 @@ export function toolsPlugin(): PluginDescriptor {
 			"write:media",
 			"read:users",
 		],
-		// Same-origin only by default. Override at install time if
-		// your site lives on a different host.
-		allowedHosts: ["localhost", "127.0.0.1", "*"],
+		// Internal plugin routes are allowed by the core HTTP layer;
+		// no external hosts are required for built-in tools.
+		allowedHosts: [],
 		storage: {
 			invocations: { indexes: ["tool", "task_id", "createdAt"] },
 		},

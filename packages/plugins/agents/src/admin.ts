@@ -16,12 +16,12 @@ interface AdminInteraction {
 }
 
 async function loadAgent(id: string, ctx: PluginContext): Promise<Agent | null> {
-	const v = await ctx.storage.agents.get(id);
+	const v = await ctx.storage.agents!.get(id);
 	return (v as Agent | null) ?? null;
 }
 
 async function listAgents(ctx: PluginContext): Promise<Agent[]> {
-	const result = await ctx.storage.agents.query({
+	const result = await ctx.storage.agents!.query({
 		orderBy: { created_at: "desc" },
 		limit: 200,
 	});
@@ -42,9 +42,7 @@ function viewListPage(agents: Agent[]) {
 		},
 		{
 			type: "actions",
-			elements: [
-				{ type: "button", text: "+ New agent", action_id: "new_agent", style: "primary" },
-			],
+			elements: [{ type: "button", text: "+ New agent", action_id: "new_agent", style: "primary" }],
 		},
 	];
 
@@ -53,7 +51,8 @@ function viewListPage(agents: Agent[]) {
 			type: "banner",
 			variant: "default",
 			title: "No agents yet",
-			description: "Create one via POST /_emdash/api/plugins/agents/agents.create or the New agent button.",
+			description:
+				"Create one via POST /_emdash/api/plugins/agents/agents.create or the New agent button.",
 		});
 	} else {
 		blocks.push({
@@ -179,7 +178,12 @@ function viewEditAgent(agent: Agent) {
 				type: "form",
 				block_id: `edit_${agent.id}`,
 				fields: [
-					{ type: "text_input", action_id: "name", label: "Display name", initial_value: agent.name },
+					{
+						type: "text_input",
+						action_id: "name",
+						label: "Display name",
+						initial_value: agent.name,
+					},
 					{ type: "text_input", action_id: "role", label: "Role", initial_value: agent.role },
 					{
 						type: "text_input",

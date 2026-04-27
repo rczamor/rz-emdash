@@ -19,7 +19,7 @@
 
 import type { PluginContext } from "emdash";
 
-import type { Action } from "./types.js";
+import type { Action, BuiltInAction } from "./types.js";
 
 export type ActionRunner<A extends Action = Action> = (
 	action: A,
@@ -27,7 +27,23 @@ export type ActionRunner<A extends Action = Action> = (
 	ctx: PluginContext,
 ) => Promise<void>;
 
-const registry = new Map<string, ActionRunner>();
+const AUTOMATIONS_REGISTRY_STATE = Symbol.for("emdash.pluginAutomations.registry");
+
+interface AutomationsRegistryState {
+	registry: Map<string, ActionRunner>;
+}
+
+type AutomationsRegistryGlobal = typeof globalThis & {
+	[AUTOMATIONS_REGISTRY_STATE]?: AutomationsRegistryState;
+};
+
+function getRegistryState(): AutomationsRegistryState {
+	const global = globalThis as AutomationsRegistryGlobal;
+	global[AUTOMATIONS_REGISTRY_STATE] ??= { registry: new Map() };
+	return global[AUTOMATIONS_REGISTRY_STATE];
+}
+
+const registry = getRegistryState().registry;
 
 export function registerAction<A extends Action>(type: A["type"], runner: ActionRunner<A>): void {
 	if (registry.has(type)) {
@@ -43,7 +59,7 @@ export function getAction(type: string): ActionRunner | undefined {
 }
 
 export function listActionTypes(): string[] {
-	return Array.from(registry.keys()).sort();
+	return [...registry.keys()].toSorted();
 }
 
 export function unregisterAction(type: string): boolean {
@@ -51,7 +67,7 @@ export function unregisterAction(type: string): boolean {
 }
 
 /** Internal — used by `actions.ts` to seed the built-ins. */
-export function _registerBuiltin<A extends Action>(
+export function _registerBuiltin<A extends BuiltInAction>(
 	type: A["type"],
 	runner: ActionRunner<A>,
 ): void {

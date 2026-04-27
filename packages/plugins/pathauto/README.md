@@ -11,11 +11,11 @@ import { tokensPlugin } from "@emdash-cms/plugin-tokens";
 import { pathautoPlugin } from "@emdash-cms/plugin-pathauto";
 
 export default defineConfig({
-  integrations: [
-    emdash({
-      plugins: [tokensPlugin(), pathautoPlugin()],
-    }),
-  ],
+	integrations: [
+		emdash({
+			plugins: [tokensPlugin(), pathautoPlugin()],
+		}),
+	],
 });
 ```
 
@@ -59,19 +59,19 @@ Slash-separated path segments are slugified independently — useful so
 `{title|slug}/{publishedAt|date:YYYY}` ends up as `the-title/2026`,
 not `the-title-2026`.
 
-| Pattern                                       | Resulting slug |
-|-----------------------------------------------|----------------|
-| `{title}`                                     | `the-title` |
-| `{publishedAt\|date:YYYY}/{title}`            | `2026/the-title` |
-| `{collection}/{title}`                        | `posts/the-title` |
-| `{author.name\|slug}/{title}`                 | `ada-lovelace/the-title` |
+| Pattern                            | Resulting slug           |
+| ---------------------------------- | ------------------------ |
+| `{title}`                          | `the-title`              |
+| `{publishedAt\|date:YYYY}/{title}` | `2026/the-title`         |
+| `{collection}/{title}`             | `posts/the-title`        |
+| `{author.name\|slug}/{title}`      | `ada-lovelace/the-title` |
 
 ## On-update behaviour
 
-| `onUpdate`     | Behaviour |
-|----------------|-----------|
-| `regenerate` *(default)* | Always recompute slug from the pattern. Existing slugs get overwritten — emdash creates redirects from the old slug. |
-| `preserve`     | Only generate when slug is empty. Existing slugs are kept. |
+| `onUpdate`               | Behaviour                                                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `regenerate` _(default)_ | Always recompute slug from the pattern. Existing slugs get overwritten — emdash creates redirects from the old slug. |
+| `preserve`               | Only generate when slug is empty. Existing slugs are kept.                                                           |
 
 ## Bulk regenerate
 

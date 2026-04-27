@@ -11,11 +11,11 @@ import { tokensPlugin } from "@emdash-cms/plugin-tokens";
 import { automationsPlugin } from "@emdash-cms/plugin-automations";
 
 export default defineConfig({
-  integrations: [
-    emdash({
-      plugins: [tokensPlugin(), automationsPlugin()],
-    }),
-  ],
+	integrations: [
+		emdash({
+			plugins: [tokensPlugin(), automationsPlugin()],
+		}),
+	],
 });
 ```
 
@@ -23,15 +23,15 @@ export default defineConfig({
 
 A routine is a JSON document. Fields:
 
-| Field         | Required | Notes |
-|---------------|----------|-------|
+| Field         | Required | Notes                                         |
+| ------------- | -------- | --------------------------------------------- |
 | `id`          | Yes      | Slug-style identifier, unique across routines |
-| `name`        | Yes      | Human-readable label |
-| `description` | No       | Free text |
-| `enabled`     | No       | Defaults to `true` |
-| `trigger`     | Yes      | What fires the routine — see below |
-| `filter`      | No       | Structured DSL gating execution — see below |
-| `actions`     | Yes      | Non-empty array of action specs — see below |
+| `name`        | Yes      | Human-readable label                          |
+| `description` | No       | Free text                                     |
+| `enabled`     | No       | Defaults to `true`                            |
+| `trigger`     | Yes      | What fires the routine — see below            |
+| `filter`      | No       | Structured DSL gating execution — see below   |
+| `actions`     | Yes      | Non-empty array of action specs — see below   |
 
 ### Triggers
 
@@ -63,33 +63,35 @@ for agents to author. Combine with `all`, `any`, `not`.
 
 ```json
 {
-  "filter": {
-    "all": [
-      { "eq":     { "path": "event.collection",          "value": "posts" } },
-      { "eq":     { "path": "event.content.featured",    "value": true } },
-      { "exists": { "path": "event.content.publishedAt" } },
-      { "any": [
-          { "in":   { "path": "event.content.tag", "values": ["new", "trending"] } },
-          { "gte":  { "path": "event.content.viewCount", "value": 1000 } }
-      ] }
-    ]
-  }
+	"filter": {
+		"all": [
+			{ "eq": { "path": "event.collection", "value": "posts" } },
+			{ "eq": { "path": "event.content.featured", "value": true } },
+			{ "exists": { "path": "event.content.publishedAt" } },
+			{
+				"any": [
+					{ "in": { "path": "event.content.tag", "values": ["new", "trending"] } },
+					{ "gte": { "path": "event.content.viewCount", "value": 1000 } }
+				]
+			}
+		]
+	}
 }
 ```
 
-| Operator   | Shape |
-|------------|-------|
-| `eq`       | `{ path, value }` — deep equality |
-| `ne`       | `{ path, value }` |
-| `in`       | `{ path, values: [...] }` |
-| `notIn`    | `{ path, values: [...] }` |
-| `contains` | `{ path, value }` — substring on string values |
-| `matches`  | `{ path, pattern, flags? }` — regex |
-| `gt` / `gte` / `lt` / `lte` | `{ path, value }` — numeric |
-| `exists`   | `{ path }` — true if value !== undefined |
-| `all`      | `[Filter, …]` — every child must match |
-| `any`      | `[Filter, …]` — at least one child matches |
-| `not`      | `Filter` — invert |
+| Operator                    | Shape                                          |
+| --------------------------- | ---------------------------------------------- |
+| `eq`                        | `{ path, value }` — deep equality              |
+| `ne`                        | `{ path, value }`                              |
+| `in`                        | `{ path, values: [...] }`                      |
+| `notIn`                     | `{ path, values: [...] }`                      |
+| `contains`                  | `{ path, value }` — substring on string values |
+| `matches`                   | `{ path, pattern, flags? }` — regex            |
+| `gt` / `gte` / `lt` / `lte` | `{ path, value }` — numeric                    |
+| `exists`                    | `{ path }` — true if value !== undefined       |
+| `all`                       | `[Filter, …]` — every child must match         |
+| `any`                       | `[Filter, …]` — at least one child matches     |
+| `not`                       | `Filter` — invert                              |
 
 `path` traverses the event payload via dot-notation. The root has shape
 `{ event: <hook payload>, … }`. So for a `content:afterPublish` routine,
@@ -103,9 +105,12 @@ is recorded on `routine.stats.lastError`.
 #### `email`
 
 ```json
-{ "type": "email", "to": "{site.email}",
-  "subject": "[{site.name}] {event.content.title}",
-  "body":    "Just published: {event.content.title}\n\n{event.content.summary}" }
+{
+	"type": "email",
+	"to": "{site.email}",
+	"subject": "[{site.name}] {event.content.title}",
+	"body": "Just published: {event.content.title}\n\n{event.content.summary}"
+}
 ```
 
 Uses `ctx.email.send()` — routes through whichever email-provider plugin
@@ -114,10 +119,13 @@ is active (e.g. `@emdash-cms/plugin-resend`).
 #### `webhook`
 
 ```json
-{ "type": "webhook", "url": "https://hooks.slack.com/services/…",
-  "method": "POST",
-  "headers": { "Content-Type": "application/json" },
-  "body": "{\"text\":\"New post: {event.content.title}\"}" }
+{
+	"type": "webhook",
+	"url": "https://hooks.slack.com/services/…",
+	"method": "POST",
+	"headers": { "Content-Type": "application/json" },
+	"body": "{\"text\":\"New post: {event.content.title}\"}"
+}
 ```
 
 Default `method` is `POST`; default `Content-Type` is `application/json`
@@ -126,9 +134,12 @@ when a body is present.
 #### `log`
 
 ```json
-{ "type": "log", "level": "info",
-  "message": "{event.collection}/{event.content.id} published",
-  "data": { "audit": "rule" } }
+{
+	"type": "log",
+	"level": "info",
+	"message": "{event.collection}/{event.content.id} published",
+	"data": { "audit": "rule" }
+}
 ```
 
 Levels: `debug | info | warn | error`. Goes through emdash's structured
@@ -146,12 +157,12 @@ Writes to plugin KV. String values are token-resolved before storage.
 
 Inside any string field of an action, you can reference:
 
-| Path                | Resolves to |
-|---------------------|-------------|
-| `{event.…}`         | The hook payload, with all its fields |
-| `{site.name}`       | The configured site name |
-| `{routine.id}` / `{routine.name}` | The routine itself |
-| `{now}`, `{uuid}`, `{timestamp}` | Dynamic helpers |
+| Path                                                                    | Resolves to                                          |
+| ----------------------------------------------------------------------- | ---------------------------------------------------- |
+| `{event.…}`                                                             | The hook payload, with all its fields                |
+| `{site.name}`                                                           | The configured site name                             |
+| `{routine.id}` / `{routine.name}`                                       | The routine itself                                   |
+| `{now}`, `{uuid}`, `{timestamp}`                                        | Dynamic helpers                                      |
 | Any token formatter (`\|date:YYYY-MM-DD`, `\|upper`, `\|default:NA`, …) | See [@emdash-cms/plugin-tokens](../tokens/README.md) |
 
 ## Manage via the API
@@ -173,20 +184,22 @@ payload — useful while authoring.
 
 ```json
 {
-  "id": "slack-featured",
-  "name": "Slack on featured publish",
-  "trigger": { "on": "content:afterPublish" },
-  "filter": {
-    "all": [
-      { "eq": { "path": "event.collection",       "value": "posts" } },
-      { "eq": { "path": "event.content.featured", "value": true } }
-    ]
-  },
-  "actions": [{
-    "type": "webhook",
-    "url": "https://hooks.slack.com/services/T000/B000/XXX",
-    "body": "{\"text\":\"📣 *{event.content.title}* — https://{site.name}/{event.content.slug}\"}"
-  }]
+	"id": "slack-featured",
+	"name": "Slack on featured publish",
+	"trigger": { "on": "content:afterPublish" },
+	"filter": {
+		"all": [
+			{ "eq": { "path": "event.collection", "value": "posts" } },
+			{ "eq": { "path": "event.content.featured", "value": true } }
+		]
+	},
+	"actions": [
+		{
+			"type": "webhook",
+			"url": "https://hooks.slack.com/services/T000/B000/XXX",
+			"body": "{\"text\":\"📣 *{event.content.title}* — https://{site.name}/{event.content.slug}\"}"
+		}
+	]
 }
 ```
 
@@ -194,16 +207,18 @@ payload — useful while authoring.
 
 ```json
 {
-  "id": "weekly-digest",
-  "name": "Weekly content digest",
-  "trigger": { "on": "cron", "schedule": "0 9 * * 1" },
-  "actions": [
-    { "type": "log",  "message": "Weekly digest fired at {now|date:YYYY-MM-DD HH:mm}" },
-    { "type": "email",
-      "to": "team@example.com",
-      "subject": "{site.name} weekly digest",
-      "body":    "Compiled at {now|date:YYYY-MM-DD}." }
-  ]
+	"id": "weekly-digest",
+	"name": "Weekly content digest",
+	"trigger": { "on": "cron", "schedule": "0 9 * * 1" },
+	"actions": [
+		{ "type": "log", "message": "Weekly digest fired at {now|date:YYYY-MM-DD HH:mm}" },
+		{
+			"type": "email",
+			"to": "team@example.com",
+			"subject": "{site.name} weekly digest",
+			"body": "Compiled at {now|date:YYYY-MM-DD}."
+		}
+	]
 }
 ```
 
@@ -211,19 +226,22 @@ payload — useful while authoring.
 
 ```json
 {
-  "id": "tag-shorts",
-  "name": "Auto-tag posts under 200 words as 'short'",
-  "trigger": { "on": "content:beforeSave" },
-  "filter": {
-    "all": [
-      { "eq":  { "path": "event.collection", "value": "posts" } },
-      { "lt":  { "path": "event.content.wordCount", "value": 200 } },
-      { "not": { "contains": { "path": "event.content.tags", "value": "short" } } }
-    ]
-  },
-  "actions": [
-    { "type": "log", "message": "Would tag {event.content.id} as 'short' (todo: implement content:update action)" }
-  ]
+	"id": "tag-shorts",
+	"name": "Auto-tag posts under 200 words as 'short'",
+	"trigger": { "on": "content:beforeSave" },
+	"filter": {
+		"all": [
+			{ "eq": { "path": "event.collection", "value": "posts" } },
+			{ "lt": { "path": "event.content.wordCount", "value": 200 } },
+			{ "not": { "contains": { "path": "event.content.tags", "value": "short" } } }
+		]
+	},
+	"actions": [
+		{
+			"type": "log",
+			"message": "Would tag {event.content.id} as 'short' (todo: implement content:update action)"
+		}
+	]
 }
 ```
 
@@ -246,19 +264,19 @@ import type { Action } from "@emdash-cms/plugin-automations";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
 
 interface SlackAction extends Action {
-  type: "slack";
-  channel: string;
-  message: string;
+	type: "slack";
+	channel: string;
+	message: string;
 }
 
 registerAction<SlackAction>("slack", async (action, tokenCtx, ctx) => {
-  if (!ctx.http) throw new Error("network:fetch missing");
-  const message = await resolveTokens(action.message, tokenCtx);
-  await ctx.http.fetch(process.env.SLACK_WEBHOOK_URL!, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ channel: action.channel, text: message }),
-  });
+	if (!ctx.http) throw new Error("network:fetch missing");
+	const message = await resolveTokens(action.message, tokenCtx);
+	await ctx.http.fetch(process.env.SLACK_WEBHOOK_URL!, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ channel: action.channel, text: message }),
+	});
 });
 ```
 
@@ -281,7 +299,7 @@ actions:
 - **Test** — fires the routine immediately against a synthetic
   `{ _testFire: true }` event payload. Useful while authoring.
 
-By design, you can't *create* or *edit* routines in the UI — that's an
+By design, you can't _create_ or _edit_ routines in the UI — that's an
 agent's job via the routines.upsert API. The UI is for visibility and
 on/off control.
 

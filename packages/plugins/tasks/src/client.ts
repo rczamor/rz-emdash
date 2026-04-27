@@ -1,3 +1,4 @@
+const TRAILING_SLASH_RE = /\/$/;
 /**
  * Tasks client utilities — pure functions importable by other plugins.
  *
@@ -56,7 +57,7 @@ export async function recordCost(
 	options: { fetch?: typeof fetch; baseUrl?: string } = {},
 ): Promise<void> {
 	const fetchImpl = options.fetch ?? globalThis.fetch;
-	const url = (options.baseUrl ?? "").replace(/\/$/, "") + `${BASE}/cost.record`;
+	const url = (options.baseUrl ?? "").replace(TRAILING_SLASH_RE, "") + `${BASE}/cost.record`;
 	const res = await fetchImpl(url, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -72,7 +73,7 @@ export async function checkQuota(
 	options: { fetch?: typeof fetch; baseUrl?: string } = {},
 ): Promise<QuotaCheckResult> {
 	const fetchImpl = options.fetch ?? globalThis.fetch;
-	const url = (options.baseUrl ?? "").replace(/\/$/, "") + `${BASE}/quota.check`;
+	const url = (options.baseUrl ?? "").replace(TRAILING_SLASH_RE, "") + `${BASE}/quota.check`;
 	const res = await fetchImpl(url, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },

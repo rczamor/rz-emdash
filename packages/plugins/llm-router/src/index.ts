@@ -35,19 +35,14 @@ export type {
 } from "./types.js";
 
 export type { Driver, DriverConfig, DriverHandlers, NativeRoute } from "./driver.js";
-export {
-	getDriver,
-	listDrivers,
-	registerDriver,
-	resolveActiveDriver,
-} from "./driver.js";
+export { getDriver, listDrivers, registerDriver, resolveActiveDriver } from "./driver.js";
 
 export interface LlmRouterPluginOptions {
 	/**
 	 * Force a specific driver id. Overrides auto-detect and the
 	 * LLM_ROUTER_DRIVER env var.
 	 */
-	driver?: "openrouter" | "tensorzero" | "litellm" | string;
+	driver?: string;
 }
 
 export function llmRouterPlugin(_options: LlmRouterPluginOptions = {}): PluginDescriptor {

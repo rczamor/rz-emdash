@@ -29,10 +29,10 @@
  *     iteration limit.
  */
 
-import { definePlugin } from "emdash";
-import type { PluginContext } from "emdash";
 import { registerAction } from "@emdash-cms/plugin-automations/registry";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
+import { definePlugin } from "emdash";
+import type { PluginContext } from "emdash";
 
 import { runChatLoop } from "./chat-loop.js";
 import {
@@ -44,11 +44,9 @@ import {
 	type ChatMessage,
 	type OpenRouterConfig,
 } from "./client.js";
-import {
-	checkQuota,
-	compileAgentSystemPrompt,
-	fetchAgentToolsForOpenAI,
-} from "./task-context.js";
+import { checkQuota, compileAgentSystemPrompt, fetchAgentToolsForOpenAI } from "./task-context.js";
+
+const TRAILING_SLASH_RE = /\/$/;
 
 const KEY_KV = "settings:apiKey";
 const DEFAULT_MODEL_KV = "settings:defaultModel";
@@ -60,6 +58,10 @@ interface RouteCtx {
 }
 
 const NOW = () => new Date().toISOString();
+
+function optionalString(value: unknown): string | undefined {
+	return typeof value === "string" ? value : undefined;
+}
 
 async function getConfig(ctx: PluginContext): Promise<OpenRouterConfig | null> {
 	const stored = (await ctx.kv.get<string>(KEY_KV)) ?? process.env.OPENROUTER_API_KEY;
@@ -80,9 +82,7 @@ async function getDefaultModel(ctx: PluginContext): Promise<string> {
 }
 
 async function getDefaultEmbeddingsModel(ctx: PluginContext): Promise<string> {
-	return (
-		(await ctx.kv.get<string>(DEFAULT_EMBED_MODEL_KV)) ?? "openai/text-embedding-3-small"
-	);
+	return (await ctx.kv.get<string>(DEFAULT_EMBED_MODEL_KV)) ?? "openai/text-embedding-3-small";
 }
 
 async function recordUsage(
@@ -91,7 +91,7 @@ async function recordUsage(
 	usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number },
 ): Promise<void> {
 	const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-	await ctx.storage.usage.put(id, {
+	await ctx.storage.usage!.put(id, {
 		model,
 		promptTokens: usage.prompt_tokens ?? 0,
 		completionTokens: usage.completion_tokens ?? 0,
@@ -188,11 +188,9 @@ async function runAgentAwareChat(
 		if (response.usage) await recordUsage(ctx, model, response.usage);
 		// Even without tools, attribute cost to task if provided
 		if (body.task_id && ctx.http && response.usage) {
-			const baseUrl =
-				((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(
-					/\/$/,
-					"",
-				);
+			const baseUrl = (
+				(ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321"
+			).replace(TRAILING_SLASH_RE, "");
 			try {
 				await ctx.http.fetch(`${baseUrl}/_emdash/api/plugins/tasks/cost.record`, {
 					method: "POST",
@@ -353,7 +351,7 @@ async function buildAdminPage(ctx: PluginContext) {
 	const defaultEmbed = await getDefaultEmbeddingsModel(ctx);
 
 	const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-	const recent = await ctx.storage.usage.query({
+	const recent = await ctx.storage.usage!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 1000,
 	});
@@ -424,7 +422,7 @@ async function buildAdminPage(ctx: PluginContext) {
 
 async function buildUsageWidget(ctx: PluginContext) {
 	const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-	const recent = await ctx.storage.usage.query({
+	const recent = await ctx.storage.usage!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 500,
 	});
@@ -452,7 +450,7 @@ async function buildUsageWidget(ctx: PluginContext) {
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				ctx.log.info(
 					"OpenRouter installed (llm:chat, llm:summarize, llm:embed, llm:agent action types registered)",
 				);
@@ -477,9 +475,12 @@ export default definePlugin({
 
 		complete: {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| { model?: string; prompt?: string; agent_id?: string; task_id?: string }
-					| null;
+				const body = routeCtx.input as {
+					model?: string;
+					prompt?: string;
+					agent_id?: string;
+					task_id?: string;
+				} | null;
 				if (!body || !body.prompt) return { ok: false, error: "prompt required" };
 				const result = await runAgentAwareChat(
 					{
@@ -548,9 +549,10 @@ export default definePlugin({
 
 		"settings.save": {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| { defaultModel?: string; defaultEmbeddingsModel?: string }
-					| null;
+				const body = routeCtx.input as {
+					defaultModel?: string;
+					defaultEmbeddingsModel?: string;
+				} | null;
 				if (!body) return { ok: false, error: "Body required" };
 				if (body.defaultModel) await ctx.kv.set(DEFAULT_MODEL_KV, body.defaultModel);
 				if (body.defaultEmbeddingsModel)
@@ -585,9 +587,11 @@ export default definePlugin({
 				}
 				if (interaction.type === "form_submit" && interaction.action_id === "save_defaults") {
 					const v = interaction.values ?? {};
-					if (v.defaultModel) await ctx.kv.set(DEFAULT_MODEL_KV, String(v.defaultModel));
-					if (v.defaultEmbeddingsModel)
-						await ctx.kv.set(DEFAULT_EMBED_MODEL_KV, String(v.defaultEmbeddingsModel));
+					const defaultModel = optionalString(v.defaultModel);
+					const defaultEmbeddingsModel = optionalString(v.defaultEmbeddingsModel);
+					if (defaultModel) await ctx.kv.set(DEFAULT_MODEL_KV, defaultModel);
+					if (defaultEmbeddingsModel)
+						await ctx.kv.set(DEFAULT_EMBED_MODEL_KV, defaultEmbeddingsModel);
 					return {
 						...(await buildAdminPage(ctx)),
 						toast: { message: "Defaults saved", type: "success" },

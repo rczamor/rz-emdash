@@ -15,6 +15,8 @@
 import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
 
+import { COUNTRIES } from "./countries.js";
+import { geocode, reverseGeocode } from "./geocoding.js";
 import {
 	addressFromSubmission,
 	formatAddress,
@@ -22,8 +24,6 @@ import {
 	validateAddress,
 	webformFieldsForCountry,
 } from "./util.js";
-import { COUNTRIES } from "./countries.js";
-import { geocode, reverseGeocode } from "./geocoding.js";
 
 interface RouteCtx {
 	input: unknown;
@@ -36,7 +36,7 @@ function getQueryParam(routeCtx: RouteCtx, key: string): string | undefined {
 
 async function buildAdminPage(ctx: PluginContext) {
 	const list = listCountries();
-	const cacheCount = await ctx.storage.geocache.count({});
+	const cacheCount = await ctx.storage.geocache!.count({});
 	return {
 		blocks: [
 			{ type: "header", text: "Address" },
@@ -98,9 +98,10 @@ export default definePlugin({
 		validate: {
 			public: true,
 			handler: async (routeCtx: RouteCtx) => {
-				const body = routeCtx.input as
-					| { country?: string; address?: Record<string, string> }
-					| null;
+				const body = routeCtx.input as {
+					country?: string;
+					address?: Record<string, string>;
+				} | null;
 				if (!body || !body.country || !body.address) {
 					return { ok: false, error: "country + address required" };
 				}
@@ -112,9 +113,10 @@ export default definePlugin({
 		format: {
 			public: true,
 			handler: async (routeCtx: RouteCtx) => {
-				const body = routeCtx.input as
-					| { country?: string; address?: Record<string, string> }
-					| null;
+				const body = routeCtx.input as {
+					country?: string;
+					address?: Record<string, string>;
+				} | null;
 				if (!body || !body.country || !body.address) {
 					return { ok: false, error: "country + address required" };
 				}
@@ -124,9 +126,11 @@ export default definePlugin({
 
 		geocode: {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| { address?: Record<string, string>; country?: string; bypassCache?: boolean }
-					| null;
+				const body = routeCtx.input as {
+					address?: Record<string, string>;
+					country?: string;
+					bypassCache?: boolean;
+				} | null;
 				if (!body || !body.address) {
 					return { ok: false, error: "address required" };
 				}
@@ -146,9 +150,7 @@ export default definePlugin({
 
 		reverseGeocode: {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| { lat?: number; lng?: number; bypassCache?: boolean }
-					| null;
+				const body = routeCtx.input as { lat?: number; lng?: number; bypassCache?: boolean } | null;
 				if (!body || typeof body.lat !== "number" || typeof body.lng !== "number") {
 					return { ok: false, error: "lat + lng required" };
 				}

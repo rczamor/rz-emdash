@@ -81,7 +81,15 @@ export function validateSubmission(
 }
 
 function validateFieldType(field: FormField, value: unknown): string | null {
-	if (typeof value !== "string" && field.type !== "checkbox" && field.type !== "number") {
+	// checkbox-group is the only type that legitimately receives an array;
+	// checkbox can receive booleans; number can receive numerics. Everything
+	// else must arrive as a string after FormData parsing.
+	if (
+		typeof value !== "string" &&
+		field.type !== "checkbox" &&
+		field.type !== "checkbox-group" &&
+		field.type !== "number"
+	) {
 		return `${field.label} has an invalid value`;
 	}
 

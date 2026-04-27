@@ -14,7 +14,23 @@
 
 import type { Tool } from "./types.js";
 
-const registry = new Map<string, Tool>();
+const TOOLS_REGISTRY_STATE = Symbol.for("emdash.pluginTools.registry");
+
+interface ToolsRegistryState {
+	registry: Map<string, Tool>;
+}
+
+type ToolsRegistryGlobal = typeof globalThis & {
+	[TOOLS_REGISTRY_STATE]?: ToolsRegistryState;
+};
+
+function getRegistryState(): ToolsRegistryState {
+	const global = globalThis as ToolsRegistryGlobal;
+	global[TOOLS_REGISTRY_STATE] ??= { registry: new Map() };
+	return global[TOOLS_REGISTRY_STATE];
+}
+
+const registry = getRegistryState().registry;
 
 export function registerTool(tool: Tool): void {
 	if (!tool.name || !tool.description || !tool.parameters || !tool.handler) {
@@ -31,11 +47,11 @@ export function getTool(name: string): Tool | undefined {
 }
 
 export function listTools(): Tool[] {
-	return Array.from(registry.values()).sort((a, b) => a.name.localeCompare(b.name));
+	return [...registry.values()].toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
 export function listToolNames(): string[] {
-	return Array.from(registry.keys()).sort();
+	return [...registry.keys()].toSorted();
 }
 
 export function unregisterTool(name: string): boolean {
@@ -46,4 +62,9 @@ export function unregisterTool(name: string): boolean {
 export function _registerBuiltin(tool: Tool): void {
 	if (registry.has(tool.name)) return;
 	registry.set(tool.name, tool);
+}
+
+/** @internal — test hook for clearing the registry between cases. */
+export function _resetTools(): void {
+	registry.clear();
 }

@@ -16,9 +16,9 @@
  *   POST  admin                     Block Kit
  */
 
-import { definePlugin } from "emdash";
-import type { PluginContext } from "emdash";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
+import { definePlugin } from "emdash";
+import type { PluginContext, WhereValue } from "emdash";
 
 import { handleAdminInteraction } from "./form-builder.js";
 import {
@@ -27,26 +27,24 @@ import {
 	formatBytes,
 	isValidFormId,
 	mimeMatches,
-	normaliseFileRefs,
 	preprocessForStorage,
-	sanitiseHtml,
 	validateSubmission,
 } from "./pure.js";
 import type {
-	FieldDef,
-	FieldType,
 	FileRef,
 	FormDefinition,
-	FormStep,
 	NotificationConfig,
 	SubmissionLimits,
 	SubmissionRecord,
-	VisibleIf,
 } from "./types.js";
 
 const HONEYPOT_FIELD = "_hp";
 const RATE_LIMIT_PREFIX = "rl:";
 const NOW = () => new Date().toISOString();
+
+function formDataString(value: FormDataEntryValue | null): string {
+	return typeof value === "string" ? value : "";
+}
 
 // ── Rate limiting + submission limits ───────────────────────────────────────
 
@@ -77,11 +75,11 @@ async function submissionLimitOk(
 	if (!limits) return { ok: true };
 
 	if (limits.total != null) {
-		const c = await ctx.storage.submissions.count({ formId: form.id });
+		const c = await ctx.storage.submissions!.count({ formId: form.id });
 		if (c >= limits.total) return { ok: false, reason: "Submission limit reached" };
 	}
 	if (limits.perIp != null && ip) {
-		const c = await ctx.storage.submissions.count({ formId: form.id, ip });
+		const c = await ctx.storage.submissions!.count({ formId: form.id, ip });
 		if (c >= limits.perIp) return { ok: false, reason: "Submission limit reached for this IP" };
 	}
 	if (limits.perEmail) {
@@ -89,8 +87,8 @@ async function submissionLimitOk(
 		if (typeof email === "string" && email) {
 			// Storage `count` only filters by indexed fields; emails aren't indexed,
 			// so scan recent submissions and count manually.
-			const result = await ctx.storage.submissions.query({
-				filter: { formId: form.id },
+			const result = await ctx.storage.submissions!.query({
+				where: { formId: form.id },
 				orderBy: { createdAt: "desc" },
 				limit: 1000,
 			});
@@ -166,7 +164,7 @@ interface RouteCtx {
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				ctx.log.info("Webform plugin installed");
 			},
 		},
@@ -184,7 +182,7 @@ export default definePlugin({
 				const formId = body.formId;
 				if (!isValidFormId(formId)) return { ok: false, error: "Missing or invalid formId" };
 
-				const stored = await ctx.storage.forms.get(formId);
+				const stored = await ctx.storage.forms!.get(formId);
 				if (!stored) return { ok: false, error: "Form not found" };
 				const form = stored as FormDefinition;
 				if (!form.enabled) return { ok: false, error: "Form is disabled" };
@@ -221,7 +219,7 @@ export default definePlugin({
 					createdAt: NOW(),
 				};
 				const subId = newId();
-				await ctx.storage.submissions.put(subId, submission);
+				await ctx.storage.submissions!.put(subId, submission);
 
 				// Notify (fire and forget)
 				const siteName = ctx.site?.name ?? "Site";
@@ -252,13 +250,13 @@ export default definePlugin({
 					return { ok: false, error: "Use multipart/form-data with a 'file' field" };
 				}
 				const form = await req.formData();
-				const formId = String(form.get("formId") ?? "");
-				const fieldName = String(form.get("field") ?? "");
+				const formId = formDataString(form.get("formId"));
+				const fieldName = formDataString(form.get("field"));
 				const file = form.get("file");
 				if (!isValidFormId(formId)) return { ok: false, error: "Invalid formId" };
 				if (!file || typeof file === "string") return { ok: false, error: "No file" };
 
-				const stored = await ctx.storage.forms.get(formId);
+				const stored = await ctx.storage.forms!.get(formId);
 				if (!stored) return { ok: false, error: "Form not found" };
 				const fdef = (stored as FormDefinition).fields.find(
 					(f) => f.name === fieldName && f.type === "file",
@@ -309,7 +307,7 @@ export default definePlugin({
 		// ── Form management ────────────────────────────────────────────────
 		"forms.list": {
 			handler: async (_routeCtx: RouteCtx, ctx: PluginContext) => {
-				const result = await ctx.storage.forms.query({
+				const result = await ctx.storage.forms!.query({
 					orderBy: { createdAt: "desc" },
 					limit: 200,
 				});
@@ -321,7 +319,7 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const id = getQueryParam(routeCtx, "id");
 				if (!isValidFormId(id)) return { ok: false, error: "Missing or invalid id" };
-				const form = await ctx.storage.forms.get(id);
+				const form = await ctx.storage.forms!.get(id);
 				if (!form) return { ok: false, error: "Not found" };
 				return { ok: true, form };
 			},
@@ -346,22 +344,25 @@ export default definePlugin({
 					return { ok: false, error: "Field names must be unique" };
 				}
 				if (Array.isArray(body.steps)) {
-					for (const step of body.steps as FormStep[]) {
+					for (const step of body.steps) {
 						for (const fname of step.fields) {
 							if (!fieldNames.has(fname)) {
-								return { ok: false, error: `Step "${step.id}" references unknown field "${fname}"` };
+								return {
+									ok: false,
+									error: `Step "${step.id}" references unknown field "${fname}"`,
+								};
 							}
 						}
 					}
 				}
 
-				const existing = (await ctx.storage.forms.get(body.id)) as FormDefinition | null;
+				const existing = (await ctx.storage.forms!.get(body.id)) as FormDefinition | null;
 				const form: FormDefinition = {
 					id: body.id,
 					title: body.title,
 					description: body.description,
-					fields: body.fields as FieldDef[],
-					steps: body.steps as FormStep[] | undefined,
+					fields: body.fields,
+					steps: body.steps,
 					notifications: body.notifications ?? [],
 					confirmation: body.confirmation,
 					rateLimit: body.rateLimit,
@@ -370,7 +371,7 @@ export default definePlugin({
 					createdAt: existing?.createdAt ?? NOW(),
 					updatedAt: NOW(),
 				};
-				await ctx.storage.forms.put(form.id, form);
+				await ctx.storage.forms!.put(form.id, form);
 				return { ok: true, form };
 			},
 		},
@@ -379,7 +380,7 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const body = routeCtx.input as { id?: unknown } | null;
 				if (!body || !isValidFormId(body.id)) return { ok: false, error: "Invalid id" };
-				const removed = await ctx.storage.forms.delete(body.id);
+				const removed = await ctx.storage.forms!.delete(body.id);
 				return { ok: true, removed };
 			},
 		},
@@ -390,9 +391,9 @@ export default definePlugin({
 				if (!body || !isValidFormId(body.id) || !isValidFormId(body.newId)) {
 					return { ok: false, error: "Invalid id or newId" };
 				}
-				const existing = (await ctx.storage.forms.get(body.id)) as FormDefinition | null;
+				const existing = (await ctx.storage.forms!.get(body.id)) as FormDefinition | null;
 				if (!existing) return { ok: false, error: "Source form not found" };
-				const collide = await ctx.storage.forms.exists(body.newId);
+				const collide = await ctx.storage.forms!.exists(body.newId);
 				if (collide) return { ok: false, error: "Target id already exists" };
 				const copy: FormDefinition = {
 					...existing,
@@ -401,7 +402,7 @@ export default definePlugin({
 					createdAt: NOW(),
 					updatedAt: NOW(),
 				};
-				await ctx.storage.forms.put(copy.id, copy);
+				await ctx.storage.forms!.put(copy.id, copy);
 				return { ok: true, form: copy };
 			},
 		},
@@ -419,11 +420,11 @@ export default definePlugin({
 					500,
 				);
 				const cursor = getQueryParam(routeCtx, "cursor");
-				const filter: Record<string, unknown> = {};
+				const filter: Record<string, WhereValue> = {};
 				if (formId) filter.formId = formId;
 				if (status) filter.status = status;
-				const result = await ctx.storage.submissions.query({
-					filter: Object.keys(filter).length ? filter : undefined,
+				const result = await ctx.storage.submissions!.query({
+					where: Object.keys(filter).length ? filter : undefined,
 					orderBy: { createdAt: "desc" },
 					limit,
 					cursor,
@@ -456,7 +457,7 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const id = getQueryParam(routeCtx, "id");
 				if (!id) return { ok: false, error: "id required" };
-				const sub = await ctx.storage.submissions.get(id);
+				const sub = await ctx.storage.submissions!.get(id);
 				if (!sub) return { ok: false, error: "Not found" };
 				return { ok: true, submission: { id, ...(sub as object) } };
 			},
@@ -466,7 +467,7 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const body = routeCtx.input as { id?: unknown } | null;
 				if (!body || typeof body.id !== "string") return { ok: false, error: "id required" };
-				const removed = await ctx.storage.submissions.delete(body.id);
+				const removed = await ctx.storage.submissions!.delete(body.id);
 				return { ok: true, removed };
 			},
 		},
@@ -477,10 +478,10 @@ export default definePlugin({
 				if (!isValidFormId(formId)) {
 					return { ok: false, error: "formId query param required" };
 				}
-				const form = (await ctx.storage.forms.get(formId)) as FormDefinition | null;
+				const form = (await ctx.storage.forms!.get(formId)) as FormDefinition | null;
 				if (!form) return { ok: false, error: "Form not found" };
-				const result = await ctx.storage.submissions.query({
-					filter: { formId },
+				const result = await ctx.storage.submissions!.query({
+					where: { formId },
 					orderBy: { createdAt: "desc" },
 					limit: 10_000,
 				});
@@ -512,4 +513,3 @@ export default definePlugin({
 		},
 	},
 });
-

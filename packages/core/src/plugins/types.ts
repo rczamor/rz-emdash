@@ -101,6 +101,8 @@ export type WhereClause = Record<string, WhereValue>;
  */
 export interface QueryOptions {
 	where?: WhereClause;
+	/** @deprecated Use `where`; kept for older plugins that shipped with `filter`. */
+	filter?: WhereClause;
 	orderBy?: Record<string, "asc" | "desc">;
 	limit?: number; // Default 50, max 1000
 	cursor?: string;
@@ -328,7 +330,7 @@ export interface MediaAccessWithWrite extends MediaAccess {
  * HTTP client interface - requires network:fetch capability
  */
 export interface HttpAccess {
-	fetch(url: string, init?: RequestInit): Promise<Response>;
+	fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
 }
 
 /**

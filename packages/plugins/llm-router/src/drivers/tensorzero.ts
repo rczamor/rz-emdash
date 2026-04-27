@@ -11,7 +11,13 @@
 
 import type { Driver, NativeRoute } from "../driver.js";
 
-function authHeaders(config: { apiKey?: string; siteUrl?: string; siteName?: string }): Record<string, string> {
+const TRAILING_SLASH_RE = /\/$/;
+
+function authHeaders(config: {
+	apiKey?: string;
+	siteUrl?: string;
+	siteName?: string;
+}): Record<string, string> {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
 	};
@@ -22,7 +28,7 @@ function authHeaders(config: { apiKey?: string; siteUrl?: string; siteName?: str
 }
 
 function url(base: string, path: string): string {
-	return base.replace(/\/$/, "") + path;
+	return base.replace(TRAILING_SLASH_RE, "") + path;
 }
 
 const nativeRoutes: NativeRoute[] = [

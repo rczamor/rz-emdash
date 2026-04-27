@@ -58,8 +58,8 @@ export interface PluginDashboardWidget {
  * Storage collection declaration for sandboxed plugins
  */
 export interface StorageCollectionDeclaration {
-	indexes?: string[];
-	uniqueIndexes?: string[];
+	indexes?: Array<string | string[]>;
+	uniqueIndexes?: Array<string | string[]>;
 }
 
 export interface PluginDescriptor<TOptions = Record<string, unknown>> {

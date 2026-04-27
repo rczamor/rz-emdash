@@ -29,11 +29,13 @@
 	},
 	"devDependencies": {
 		"tsdown": "catalog:",
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	},
 	"scripts": {
 		"build": "tsdown src/index.ts src/sandbox-entry.ts --format esm --dts --clean",
 		"dev": "tsdown src/index.ts src/sandbox-entry.ts --format esm --dts --watch",
+		"test": "vitest run",
 		"typecheck": "tsgo --noEmit"
 	},
 	"optionalDependencies": {},

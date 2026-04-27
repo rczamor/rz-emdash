@@ -129,7 +129,8 @@ export function formatCsv(
 	return [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
 }
 
-function escapeCsv(value: string): string {
+/** @internal — exported for unit tests. */
+export function escapeCsv(value: string): string {
 	// Neutralize formula triggers to prevent CSV injection in spreadsheet apps
 	if (value.length > 0 && CSV_FORMULA_TRIGGERS.has(value.charAt(0))) {
 		value = "'" + value;
@@ -153,7 +154,8 @@ function getSubmissionPreview(form: FormDefinition, sub: Submission): string {
 	return previews.join(" | ") || "(empty)";
 }
 
-function formatBytes(bytes: number): string {
+/** @internal — exported for unit tests. */
+export function formatBytes(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;

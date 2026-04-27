@@ -138,7 +138,12 @@ export interface KvSetAction {
 	value: unknown;
 }
 
-export type Action = EmailAction | WebhookAction | LogAction | KvSetAction;
+export interface CustomAction {
+	type: string;
+}
+
+export type BuiltInAction = EmailAction | WebhookAction | LogAction | KvSetAction;
+export type Action = BuiltInAction | CustomAction;
 
 // ── Routine ────────────────────────────────────────────────────────────────
 

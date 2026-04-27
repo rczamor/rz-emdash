@@ -8,7 +8,7 @@
 
 import Database from "better-sqlite3";
 import { Kysely, SqliteDialect, sql } from "kysely";
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import { runMigrations } from "../../../src/database/migrations/runner.js";
 import { OptionsRepository } from "../../../src/database/repositories/options.js";
@@ -401,6 +401,10 @@ describe("Capability Enforcement Integration (v2)", () => {
 
 	describe("HTTP Access", () => {
 		describe("createHttpAccess (with host restrictions)", () => {
+			afterEach(() => {
+				vi.unstubAllGlobals();
+			});
+
 			it("allows requests to allowed hosts", async () => {
 				const http = createHttpAccess("test-plugin", ["example.com"]);
 
@@ -423,6 +427,43 @@ describe("Capability Enforcement Integration (v2)", () => {
 				await expect(http.fetch("https://api.example.com/test")).rejects.not.toThrow(
 					NO_ALLOWED_FETCH_REGEX,
 				);
+			});
+
+			it("allows same-origin internal plugin API calls with internal headers", async () => {
+				const fetchMock = vi.fn(async () => new Response("ok", { status: 200 }));
+				vi.stubGlobal("fetch", fetchMock);
+
+				const http = createHttpAccess("tools", [], "https://example.test/");
+				const response = await http.fetch(
+					"https://example.test/_emdash/api/plugins/agents/agents.get?id=agent-1",
+				);
+
+				expect(response.ok).toBe(true);
+				expect(fetchMock).toHaveBeenCalledTimes(1);
+				const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+				const headers = new Headers(init.headers);
+				expect(headers.get("X-EmDash-Internal-Plugin")).toBeTruthy();
+				expect(headers.get("X-EmDash-Internal-Plugin-From")).toBe("tools");
+				expect(headers.get("X-EmDash-Request")).toBe("1");
+			});
+
+			it("preserves Request input method and headers", async () => {
+				const fetchMock = vi.fn(async () => new Response("ok", { status: 200 }));
+				vi.stubGlobal("fetch", fetchMock);
+
+				const http = createHttpAccess("tools", [], "https://example.test");
+				const request = new Request("https://example.test/_emdash/api/plugins/tools/tools.invoke", {
+					method: "POST",
+					headers: { "Content-Type": "application/json", "X-Test": "yes" },
+					body: "{}",
+				});
+				await http.fetch(request);
+
+				const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+				expect(init.method).toBe("POST");
+				const headers = new Headers(init.headers);
+				expect(headers.get("Content-Type")).toBe("application/json");
+				expect(headers.get("X-Test")).toBe("yes");
 			});
 		});
 
@@ -477,6 +518,22 @@ describe("Capability Enforcement Integration (v2)", () => {
 			expect(typeof collection.deleteMany).toBe("function");
 			expect(typeof collection.query).toBe("function");
 			expect(typeof collection.count).toBe("function");
+		});
+
+		it("honors deprecated filter query option as where", async () => {
+			const storage = createStorageAccess(db, "test-plugin", {
+				items: { indexes: ["status"] },
+			});
+
+			await storage.items.put("draft", { status: "draft" });
+			await storage.items.put("published", { status: "published" });
+
+			const result = await storage.items.query({
+				filter: { status: "published" },
+			});
+
+			expect(result.items).toHaveLength(1);
+			expect(result.items[0]!.id).toBe("published");
 		});
 
 		it("isolates storage between plugins", async () => {

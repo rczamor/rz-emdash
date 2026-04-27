@@ -60,7 +60,7 @@ describe("canTransition — disallowed paths", () => {
 
 describe("allTransitions", () => {
 	it("backlog allows in_progress + cancelled", () => {
-		expect(allTransitions("backlog").sort()).toEqual(["cancelled", "in_progress"]);
+		expect(allTransitions("backlog").toSorted()).toEqual(["cancelled", "in_progress"]);
 	});
 
 	it("cancelled has no transitions", () => {
@@ -68,7 +68,7 @@ describe("allTransitions", () => {
 	});
 
 	it("approved allows three transitions", () => {
-		expect(allTransitions("approved").sort()).toEqual(["in_progress", "published", "rejected"]);
+		expect(allTransitions("approved").toSorted()).toEqual(["in_progress", "published", "rejected"]);
 	});
 
 	it("every state's allTransitions agrees with canTransition", () => {
@@ -100,7 +100,7 @@ describe("isTerminal", () => {
 	});
 
 	it("TERMINAL list contains exactly published + cancelled", () => {
-		expect(TERMINAL.sort()).toEqual(["cancelled", "published"]);
+		expect(TERMINAL.toSorted()).toEqual(["cancelled", "published"]);
 	});
 });
 

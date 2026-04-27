@@ -69,7 +69,8 @@ interface Props {
 
 const { id, submitUrl, uploadUrl, showHeader = true } = Astro.props;
 
-const baseUrl = Astro.site?.toString().replace(/\/$/, "") ?? Astro.url.origin;
+const TRAILING_SLASH_RE = /\/$/;
+const baseUrl = Astro.site?.toString().replace(TRAILING_SLASH_RE, "") ?? Astro.url.origin;
 const fetchUrl = `${baseUrl}/_emdash/api/plugins/webform/forms.get?id=${encodeURIComponent(id)}`;
 
 let form: FormDefinition | null = null;
@@ -252,7 +253,7 @@ const uploadEndpoint = uploadUrl ?? `${baseUrl}/_emdash/api/plugins/webform/uplo
 		const redirectUrl = form.dataset.confirmationRedirect ?? "";
 		const uploadUrl = form.dataset.uploadUrl!;
 		const status = form.querySelector<HTMLParagraphElement>(".webform-status");
-		const fields = Array.from(form.querySelectorAll<HTMLElement>(".webform-field"));
+		const fields = [...form.querySelectorAll<HTMLElement>(".webform-field")];
 
 		const visibilityRules = fields
 			.map((row) => {
@@ -276,7 +277,7 @@ const uploadEndpoint = uploadUrl ?? `${baseUrl}/_emdash/api/plugins/webform/uplo
 				if (c.type === "checkbox") return c.checked;
 				return c.value;
 			}
-			const checked = Array.from(ctrls).filter((c) => c.checked).map((c) => c.value);
+			const checked = [...ctrls].filter((c) => c.checked).map((c) => c.value);
 			return checked;
 		}
 

@@ -18,10 +18,10 @@
  *   langfuse:get-prompt          Fetch a versioned prompt → KV
  */
 
-import { definePlugin } from "emdash";
-import type { PluginContext } from "emdash";
 import { registerAction } from "@emdash-cms/plugin-automations/registry";
 import { resolveTokens } from "@emdash-cms/plugin-tokens/resolver";
+import { definePlugin } from "emdash";
+import type { PluginContext } from "emdash";
 
 import { getPrompt, ingest, listDatasetItems, type LangfuseConfig } from "./api.js";
 import type {
@@ -87,11 +87,11 @@ async function recordRecentTrace(
 			id,
 			traceId,
 			name,
-			task_id: typeof metadata?.task_id === "string" ? metadata.task_id : undefined,
-			agent_id: typeof metadata?.agent_id === "string" ? metadata.agent_id : undefined,
+			taskId: typeof metadata?.task_id === "string" ? metadata.task_id : undefined,
+			agentId: typeof metadata?.agent_id === "string" ? metadata.agent_id : undefined,
 			createdAt: NOW(),
-		} as unknown as RecentTraceRecord;
-		await ctx.storage.recent_traces.put(id, record);
+		};
+		await ctx.storage.recent_traces!.put(id, record);
 	} catch (err) {
 		ctx.log.warn("Langfuse: failed to record recent trace", {
 			error: err instanceof Error ? err.message : String(err),
@@ -132,12 +132,10 @@ interface LangfuseGetPromptAction {
 registerAction<LangfuseTraceAction>("langfuse:trace", async (action, tokenCtx, ctx) => {
 	const config = await getConfig(ctx);
 	if (!config) throw new Error("Langfuse: not configured");
-	const traceId = action.traceId
-		? await resolveTokens(action.traceId, tokenCtx)
-		: newId();
+	const traceId = action.traceId ? await resolveTokens(action.traceId, tokenCtx) : newId();
 	const name = action.name ? await resolveTokens(action.name, tokenCtx) : "automation";
 	const metadata = {
-		...(action.metadata ?? {}),
+		...action.metadata,
 		task_id: action.taskId ? await resolveTokens(action.taskId, tokenCtx) : undefined,
 	};
 	const event: IngestionEvent = {
@@ -218,7 +216,7 @@ async function buildAdminPage(ctx: PluginContext) {
 		});
 	}
 
-	const recent = await ctx.storage.recent_traces.query({
+	const recent = await ctx.storage.recent_traces!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 25,
 	});
@@ -230,15 +228,16 @@ async function buildAdminPage(ctx: PluginContext) {
 			columns: [
 				{ key: "name", label: "Name", format: "text" },
 				{ key: "traceId", label: "Trace id", format: "text" },
-				{ key: "task_id", label: "Task", format: "text" },
+				{ key: "taskId", label: "Task", format: "text" },
 				{ key: "createdAt", label: "When", format: "relative_time" },
 			],
 			rows: recent.items.map((i) => {
 				const r = i.data as RecentTraceRecord;
+				const legacy = i.data as { task_id?: string };
 				return {
 					name: r.name,
 					traceId: r.traceId.slice(0, 12),
-					task_id: r.task_id ?? "",
+					taskId: r.taskId ?? legacy.task_id ?? "",
 					createdAt: r.createdAt,
 				};
 			}),
@@ -249,7 +248,7 @@ async function buildAdminPage(ctx: PluginContext) {
 }
 
 async function buildRecentWidget(ctx: PluginContext) {
-	const recent = await ctx.storage.recent_traces.query({
+	const recent = await ctx.storage.recent_traces!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 5,
 	});
@@ -279,7 +278,7 @@ async function buildRecentWidget(ctx: PluginContext) {
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				ctx.log.info(
 					"Langfuse plugin installed (langfuse:trace / langfuse:score / langfuse:get-prompt actions registered)",
 				);
@@ -302,18 +301,16 @@ export default definePlugin({
 
 		trace: {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| {
-							traceId?: string;
-							name?: string;
-							userId?: string;
-							sessionId?: string;
-							metadata?: Record<string, unknown>;
-							tags?: string[];
-							input?: unknown;
-							output?: unknown;
-					  }
-					| null;
+				const body = routeCtx.input as {
+					traceId?: string;
+					name?: string;
+					userId?: string;
+					sessionId?: string;
+					metadata?: Record<string, unknown>;
+					tags?: string[];
+					input?: unknown;
+					output?: unknown;
+				} | null;
 				if (!body) return { ok: false, error: "Body required" };
 				const config = await getConfig(ctx);
 				if (!config) return { ok: false, error: "Langfuse not configured" };
@@ -432,9 +429,11 @@ export default definePlugin({
 
 		"settings.setKeys": {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| { host?: string; publicKey?: string; secretKey?: string }
-					| null;
+				const body = routeCtx.input as {
+					host?: string;
+					publicKey?: string;
+					secretKey?: string;
+				} | null;
 				if (!body) return { ok: false, error: "Body required" };
 				if (body.host) await ctx.kv.set(HOST_KV, body.host);
 				if (body.publicKey) await ctx.kv.set(PK_KV, body.publicKey);
@@ -449,8 +448,12 @@ export default definePlugin({
 				return {
 					ok: true,
 					host: host ?? null,
-					hasPublicKey: Boolean((await ctx.kv.get<string>(PK_KV)) ?? process.env.LANGFUSE_PUBLIC_KEY),
-					hasSecretKey: Boolean((await ctx.kv.get<string>(SK_KV)) ?? process.env.LANGFUSE_SECRET_KEY),
+					hasPublicKey: Boolean(
+						(await ctx.kv.get<string>(PK_KV)) ?? process.env.LANGFUSE_PUBLIC_KEY,
+					),
+					hasSecretKey: Boolean(
+						(await ctx.kv.get<string>(SK_KV)) ?? process.env.LANGFUSE_SECRET_KEY,
+					),
 				};
 			},
 		},

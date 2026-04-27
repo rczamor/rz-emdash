@@ -22,10 +22,15 @@
 		"publishing"
 	],
 	"license": "MIT",
+	"scripts": {
+		"test": "vitest run"
+	},
 	"peerDependencies": {
 		"emdash": "workspace:>=0.7.0"
 	},
 	"dependencies": {},
-	"devDependencies": {},
+	"devDependencies": {
+		"vitest": "catalog:"
+	},
 	"optionalDependencies": {}
 }

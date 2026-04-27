@@ -13,11 +13,11 @@ import { automationsPlugin } from "@emdash-cms/plugin-automations";
 import { tasksPlugin } from "@emdash-cms/plugin-tasks";
 
 export default defineConfig({
-  integrations: [
-    emdash({
-      plugins: [automationsPlugin(), tasksPlugin()],
-    }),
-  ],
+	integrations: [
+		emdash({
+			plugins: [automationsPlugin(), tasksPlugin()],
+		}),
+	],
 });
 ```
 
@@ -29,33 +29,39 @@ registered alongside.
 
 ```ts
 interface Task {
-  id: string;
-  parent_id?: string;
-  goal: string;                  // 1-line objective
-  description?: string;          // longer brief
+	id: string;
+	parent_id?: string;
+	goal: string; // 1-line objective
+	description?: string; // longer brief
 
-  // Optional content target
-  target_collection?: string;
-  target_id?: string;            // existing item, or null = create-new
+	// Optional content target
+	target_collection?: string;
+	target_id?: string; // existing item, or null = create-new
 
-  // Polymorphic assignee — "human:<userSlug>" or "agent:<agentSlug>"
-  assignee?: string;
-  created_by: string;
+	// Polymorphic assignee — "human:<userSlug>" or "agent:<agentSlug>"
+	assignee?: string;
+	created_by: string;
 
-  status: "backlog" | "in_progress" | "pending_review"
-        | "approved" | "rejected" | "published" | "cancelled";
+	status:
+		| "backlog"
+		| "in_progress"
+		| "pending_review"
+		| "approved"
+		| "rejected"
+		| "published"
+		| "cancelled";
 
-  deadline?: string;
-  publish_at?: string;
-  depends_on?: string[];
+	deadline?: string;
+	publish_at?: string;
+	depends_on?: string[];
 
-  output?: Record<string, unknown>;
+	output?: Record<string, unknown>;
 
-  cost: { tokensIn: number; tokensOut: number; usd?: number; calls: number };
-  activity: ActivityEntry[];     // append-only
+	cost: { tokensIn: number; tokensOut: number; usd?: number; calls: number };
+	activity: ActivityEntry[]; // append-only
 
-  created_at: string;
-  updated_at: string;
+	created_at: string;
+	updated_at: string;
 }
 ```
 
@@ -79,33 +85,35 @@ the engine validates the move and logs both old and new status to
 
 Every mutation dispatches into the Automations engine:
 
-| Event | When |
-|---|---|
-| `task:created` | After a new task is persisted |
-| `task:transitioned` | After every state change |
-| `task:reviewed` | When `pending_review → approved` or `pending_review → rejected` |
-| `task:completed` | When entering a terminal state (`published`, `cancelled`) |
-| `task:assigned` | After assignee changes |
-| `task:commented` | After a comment is added |
-| `task:cost-recorded` | After an LLM cost ledger entry |
+| Event                | When                                                            |
+| -------------------- | --------------------------------------------------------------- |
+| `task:created`       | After a new task is persisted                                   |
+| `task:transitioned`  | After every state change                                        |
+| `task:reviewed`      | When `pending_review → approved` or `pending_review → rejected` |
+| `task:completed`     | When entering a terminal state (`published`, `cancelled`)       |
+| `task:assigned`      | After assignee changes                                          |
+| `task:commented`     | After a comment is added                                        |
+| `task:cost-recorded` | After an LLM cost ledger entry                                  |
 
 Routine spec example — auto-publish approved tasks via the scheduler:
 
 ```json
 {
-  "id": "auto-publish-approved",
-  "trigger": { "on": "task:transitioned" },
-  "filter": {
-    "all": [
-      { "eq": { "path": "event.to", "value": "approved" } },
-      { "exists": { "path": "event.task.target_collection" } }
-    ]
-  },
-  "actions": [{
-    "type": "webhook",
-    "url": "https://your-host/_emdash/api/plugins/scheduler/jobs.create",
-    "body": "{\"type\":\"publish\",\"payload\":{\"type\":\"publish\",\"payload\":{\"collection\":\"{event.task.target_collection}\",\"contentId\":\"{event.task.target_id}\"}},\"runAt\":\"{event.task.publish_at}\"}"
-  }]
+	"id": "auto-publish-approved",
+	"trigger": { "on": "task:transitioned" },
+	"filter": {
+		"all": [
+			{ "eq": { "path": "event.to", "value": "approved" } },
+			{ "exists": { "path": "event.task.target_collection" } }
+		]
+	},
+	"actions": [
+		{
+			"type": "webhook",
+			"url": "https://your-host/_emdash/api/plugins/scheduler/jobs.create",
+			"body": "{\"type\":\"publish\",\"payload\":{\"type\":\"publish\",\"payload\":{\"collection\":\"{event.task.target_collection}\",\"contentId\":\"{event.task.target_id}\"}},\"runAt\":\"{event.task.publish_at}\"}"
+		}
+	]
 }
 ```
 
@@ -146,7 +154,7 @@ the task. Two ledgers are maintained:
    `daily_cost` storage collection. The actor billed is the task's
    `assignee`, falling back to `created_by` if unassigned.
 
-Both quotas are enforced via `POST quota.check` *before* the LLM call:
+Both quotas are enforced via `POST quota.check` _before_ the LLM call:
 
 ```bash
 curl -X POST .../tasks/quota.check \

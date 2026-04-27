@@ -7,8 +7,8 @@
  * event dispatch — is identical across drivers.
  */
 
-import type { PluginContext } from "emdash";
 import { dispatchEvent } from "@emdash-cms/plugin-automations/dispatch";
+import type { PluginContext } from "emdash";
 
 import type { DriverHandlers } from "./driver.js";
 import type {
@@ -17,6 +17,8 @@ import type {
 	ChatMessage,
 	ChatToolCall,
 } from "./types.js";
+
+const TRAILING_SLASH_RE = /\/$/;
 
 const DEFAULT_MAX_ITERATIONS = 8;
 
@@ -48,8 +50,11 @@ export interface RunChatLoopResult {
 }
 
 function siteUrlFor(input: RunChatLoopInput, ctx: PluginContext): string {
-	if (input.siteUrl) return input.siteUrl.replace(/\/$/, "");
-	return (((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321") as string).replace(/\/$/, "");
+	if (input.siteUrl) return input.siteUrl.replace(TRAILING_SLASH_RE, "");
+	return ((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(
+		TRAILING_SLASH_RE,
+		"",
+	);
 }
 
 async function recordCostOnTask(
@@ -85,6 +90,7 @@ async function recordCostOnTask(
 async function invokeOneTool(
 	toolCall: ChatToolCall,
 	taskId: string | undefined,
+	agentId: string | undefined,
 	siteUrl: string,
 	ctx: PluginContext,
 ): Promise<ToolInvocation> {
@@ -116,6 +122,7 @@ async function invokeOneTool(
 				name: toolCall.function.name,
 				arguments: parsedArgs,
 				taskId,
+				agentId,
 			}),
 		});
 		inv.durationMs = Date.now() - start;
@@ -123,7 +130,9 @@ async function invokeOneTool(
 			inv.error = `tools.invoke returned ${res.status}`;
 			return inv;
 		}
-		const json = (await res.json()) as { data?: { ok?: boolean; output?: unknown; error?: string } };
+		const json = (await res.json()) as {
+			data?: { ok?: boolean; output?: unknown; error?: string };
+		};
 		const data = json.data ?? {};
 		if (data.ok === false) {
 			inv.error = data.error ?? "Unknown error";
@@ -136,7 +145,11 @@ async function invokeOneTool(
 	return inv;
 }
 
-function dispatch(source: string, payload: Record<string, unknown>, ctx: PluginContext): Promise<void> {
+function dispatch(
+	source: string,
+	payload: Record<string, unknown>,
+	ctx: PluginContext,
+): Promise<void> {
 	return dispatchEvent(source, payload, ctx).catch((err) => {
 		ctx.log.warn("llm-router: llm event dispatch failed", {
 			source,
@@ -171,16 +184,20 @@ export async function runChatLoop(
 
 	for (let i = 0; i < maxIterations; i++) {
 		const callStart = Date.now();
-		void dispatch("llm:call-started", {
-			provider: input.driverId,
-			model: input.completionInput.model,
-			messages: history,
-			tools: input.completionInput.tools,
-			taskId: input.taskId,
-			agentId: input.agentId,
-			iteration: i,
-			startedAt: new Date(callStart).toISOString(),
-		}, ctx);
+		void dispatch(
+			"llm:call-started",
+			{
+				provider: input.driverId,
+				model: input.completionInput.model,
+				messages: history,
+				tools: input.completionInput.tools,
+				taskId: input.taskId,
+				agentId: input.agentId,
+				iteration: i,
+				startedAt: new Date(callStart).toISOString(),
+			},
+			ctx,
+		);
 
 		let response: ChatCompletionResponse;
 		try {
@@ -195,15 +212,19 @@ export async function runChatLoop(
 				iteration: i,
 				error: errMsg,
 			});
-			void dispatch("llm:call-failed", {
-				provider: input.driverId,
-				model: input.completionInput.model,
-				taskId: input.taskId,
-				agentId: input.agentId,
-				iteration: i,
-				error: errMsg,
-				durationMs: Date.now() - callStart,
-			}, ctx);
+			void dispatch(
+				"llm:call-failed",
+				{
+					provider: input.driverId,
+					model: input.completionInput.model,
+					taskId: input.taskId,
+					agentId: input.agentId,
+					iteration: i,
+					error: errMsg,
+					durationMs: Date.now() - callStart,
+				},
+				ctx,
+			);
 			terminated = "error";
 			break;
 		}
@@ -225,24 +246,28 @@ export async function runChatLoop(
 			}
 		}
 
-		void dispatch("llm:call-finished", {
-			provider: input.driverId,
-			model: input.completionInput.model,
-			input: history,
-			output: response.choices[0]?.message,
-			usage: response.usage
-				? {
-						input: response.usage.prompt_tokens,
-						output: response.usage.completion_tokens,
-						total: response.usage.total_tokens,
-					}
-				: undefined,
-			taskId: input.taskId,
-			agentId: input.agentId,
-			iteration: i,
-			durationMs: Date.now() - callStart,
-			finishReason: response.choices[0]?.finish_reason,
-		}, ctx);
+		void dispatch(
+			"llm:call-finished",
+			{
+				provider: input.driverId,
+				model: input.completionInput.model,
+				input: history,
+				output: response.choices[0]?.message,
+				usage: response.usage
+					? {
+							input: response.usage.prompt_tokens,
+							output: response.usage.completion_tokens,
+							total: response.usage.total_tokens,
+						}
+					: undefined,
+				taskId: input.taskId,
+				agentId: input.agentId,
+				iteration: i,
+				durationMs: Date.now() - callStart,
+				finishReason: response.choices[0]?.finish_reason,
+			},
+			ctx,
+		);
 
 		const message = response.choices[0]?.message;
 		if (!message) {
@@ -258,7 +283,7 @@ export async function runChatLoop(
 
 		history.push(message);
 		const results = await Promise.all(
-			message.tool_calls.map((tc) => invokeOneTool(tc, input.taskId, siteUrl, ctx)),
+			message.tool_calls.map((tc) => invokeOneTool(tc, input.taskId, input.agentId, siteUrl, ctx)),
 		);
 		invocations.push(...results);
 		for (const inv of results) {

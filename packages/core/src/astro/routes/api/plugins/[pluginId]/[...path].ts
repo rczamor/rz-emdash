@@ -14,6 +14,7 @@ import type { APIRoute } from "astro";
 import { requirePerm } from "#api/authorize.js";
 import { apiError, apiSuccess } from "#api/error.js";
 import { requireScope } from "#auth/scopes.js";
+import { isInternalPluginRequest } from "#plugins/context.js";
 
 export const prerender = false;
 
@@ -38,7 +39,7 @@ const handleRequest: APIRoute = async ({ params, request, locals }) => {
 	}
 
 	// Public routes skip auth, CSRF, and scope checks entirely
-	if (!routeMeta.public) {
+	if (!routeMeta.public && !isInternalPluginRequest(request)) {
 		// Private routes require authentication and permission checks
 		const permission = ["GET", "HEAD", "OPTIONS"].includes(method)
 			? "plugins:read"

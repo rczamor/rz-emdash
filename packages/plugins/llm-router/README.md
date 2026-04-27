@@ -12,7 +12,7 @@ plugin per gateway duplicated the chat-loop, automation actions,
 admin UI, and event emission — and forced "register only one"
 constraints because action names collided.
 
-Now: one plugin owns the cross-cutting concerns (chat-loop, llm:*
+Now: one plugin owns the cross-cutting concerns (chat-loop, llm:\*
 event emission, cost recording, agent context, admin UI). Drivers
 implement the four-method `Driver` contract — `chatCompletion`,
 `embeddings`, `listModels`, optional `nativeRoutes`. Adding a new
@@ -26,9 +26,7 @@ the system stays untouched.
 import { llmRouterPlugin } from "@emdash-cms/plugin-llm-router";
 
 export default defineConfig({
-  integrations: [
-    emdash({ plugins: [llmRouterPlugin()] }),
-  ],
+	integrations: [emdash({ plugins: [llmRouterPlugin()] })],
 });
 ```
 
@@ -132,39 +130,46 @@ The Langfuse plugin's auto-trace routine subscribes to
 import { type Driver } from "@emdash-cms/plugin-llm-router/driver";
 
 export const myDriver: Driver = {
-  id: "myprovider",
-  name: "My Provider",
-  defaults: {
-    chatModel: "their/model-id",
-    embeddingsModel: "their/embed-model",
-  },
-  configFromEnv(env) {
-    return {
-      host: env.MYPROVIDER_HOST,
-      apiKey: env.MYPROVIDER_API_KEY,
-    };
-  },
-  detect(env) {
-    return Boolean(env.MYPROVIDER_API_KEY);
-  },
-  build(config) {
-    if (!config.apiKey) throw new Error("MyProvider: apiKey missing");
-    const headers = { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" };
+	id: "myprovider",
+	name: "My Provider",
+	defaults: {
+		chatModel: "their/model-id",
+		embeddingsModel: "their/embed-model",
+	},
+	configFromEnv(env) {
+		return {
+			host: env.MYPROVIDER_HOST,
+			apiKey: env.MYPROVIDER_API_KEY,
+		};
+	},
+	detect(env) {
+		return Boolean(env.MYPROVIDER_API_KEY);
+	},
+	build(config) {
+		if (!config.apiKey) throw new Error("MyProvider: apiKey missing");
+		const headers = {
+			Authorization: `Bearer ${config.apiKey}`,
+			"Content-Type": "application/json",
+		};
 
-    return {
-      chatCompletion: async (input, fetchImpl) => {
-        const res = await fetchImpl(`${config.host}/chat/completions`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(input),
-        });
-        if (!res.ok) throw new Error(`MyProvider chat ${res.status}`);
-        return await res.json();
-      },
-      embeddings: async (input, fetchImpl) => { /* ... */ },
-      listModels: async (fetchImpl) => { /* ... */ },
-    };
-  },
+		return {
+			chatCompletion: async (input, fetchImpl) => {
+				const res = await fetchImpl(`${config.host}/chat/completions`, {
+					method: "POST",
+					headers,
+					body: JSON.stringify(input),
+				});
+				if (!res.ok) throw new Error(`MyProvider chat ${res.status}`);
+				return await res.json();
+			},
+			embeddings: async (input, fetchImpl) => {
+				/* ... */
+			},
+			listModels: async (fetchImpl) => {
+				/* ... */
+			},
+		};
+	},
 };
 ```
 

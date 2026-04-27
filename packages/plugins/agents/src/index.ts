@@ -51,13 +51,7 @@ export function agentsPlugin(): PluginDescriptor {
 				// Index by agent_id + key for fast partition reads.
 				// Index by importance for ranking. Tags as their own index
 				// for tag filtering.
-				indexes: [
-					"agent_id",
-					"key",
-					["agent_id", "key"],
-					"importance",
-					"last_accessed_at",
-				],
+				indexes: ["agent_id", "key", ["agent_id", "key"], "importance", "last_accessed_at"],
 			},
 		},
 		adminPages: [{ path: "/agents", label: "Agents", icon: "user-circle" }],

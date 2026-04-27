@@ -7,6 +7,22 @@
 import type { FieldDef, FileRef, FormDefinition, VisibleIf } from "./types.js";
 
 export const DEFAULT_MAX_FILE_BYTES = 10 * 1024 * 1024;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const COLOR_HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const SCRIPT_STYLE_TAG_RE = /<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi;
+const HTML_TAG_RE = /<\s*\/?\s*([a-zA-Z][a-zA-Z0-9]*)([^>]*)>/g;
+const EVENT_ATTR_RE = /\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|\S+)/gi;
+const JAVASCRIPT_URL_ATTR_RE = /\s(href|src)\s*=\s*("javascript:[^"]*"|'javascript:[^']*')/gi;
+const FILE_EXTENSION_RE = /\.[^.]+$/;
+const CSV_NEEDS_QUOTES_RE = /[",\n\r]/;
+const DOUBLE_QUOTE_RE = /"/g;
+const FORM_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+function scalarString(value: unknown, fallback = ""): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	return fallback;
+}
 
 // ── Conditional visibility ──────────────────────────────────────────────────
 
@@ -24,7 +40,7 @@ export function isVisible(field: FieldDef, data: Record<string, unknown>): boole
 		case "notIn":
 			return Array.isArray(cond.value) && !cond.value.includes(other);
 		case "contains":
-			return String(other ?? "").includes(String(cond.value ?? ""));
+			return scalarString(other).includes(scalarString(cond.value));
 		case "empty":
 			return other == null || other === "" || (Array.isArray(other) && other.length === 0);
 		case "notEmpty":
@@ -78,7 +94,7 @@ export function validateField(raw: unknown, def: FieldDef): string | null {
 		return null;
 	}
 
-	const value = raw == null ? "" : String(raw);
+	const value = scalarString(raw);
 	if (def.required && value.trim() === "") return `${def.label} is required`;
 	if (value === "") return null;
 
@@ -87,7 +103,7 @@ export function validateField(raw: unknown, def: FieldDef): string | null {
 
 	switch (def.type) {
 		case "email":
-			if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `${def.label} must be an email`;
+			if (!EMAIL_RE.test(value)) return `${def.label} must be an email`;
 			break;
 		case "url":
 			try {
@@ -115,7 +131,7 @@ export function validateField(raw: unknown, def: FieldDef): string | null {
 			}
 			break;
 		case "color":
-			if (!/^#[0-9a-fA-F]{6}$/.test(value)) return `${def.label} must be a hex colour`;
+			if (!COLOR_HEX_RE.test(value)) return `${def.label} must be a hex colour`;
 			break;
 		case "select":
 		case "radio": {
@@ -146,20 +162,36 @@ export function validateSubmission(
 // ── HTML sanitiser ──────────────────────────────────────────────────────────
 
 const HTML_ALLOWED_TAGS = new Set([
-	"p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li",
-	"h1", "h2", "h3", "h4", "blockquote", "code", "pre",
+	"p",
+	"br",
+	"strong",
+	"b",
+	"em",
+	"i",
+	"u",
+	"a",
+	"ul",
+	"ol",
+	"li",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"blockquote",
+	"code",
+	"pre",
 ]);
 
 export function sanitiseHtml(input: string): string {
 	if (!input) return "";
 	let out = input;
-	out = out.replace(/<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "");
-	out = out.replace(/<\s*\/?\s*([a-zA-Z][a-zA-Z0-9]*)([^>]*)>/g, (full, tag, attrs) => {
+	out = out.replace(SCRIPT_STYLE_TAG_RE, "");
+	out = out.replace(HTML_TAG_RE, (full, tag, attrs) => {
 		const lower = String(tag).toLowerCase();
 		if (!HTML_ALLOWED_TAGS.has(lower)) return "";
 		const cleanedAttrs = String(attrs)
-			.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|\S+)/gi, "")
-			.replace(/\s(href|src)\s*=\s*("javascript:[^"]*"|'javascript:[^']*')/gi, "");
+			.replace(EVENT_ATTR_RE, "")
+			.replace(JAVASCRIPT_URL_ATTR_RE, "");
 		return full.startsWith("</")
 			? `</${lower}>`
 			: `<${lower}${cleanedAttrs}${attrs.endsWith("/") ? "" : ""}>`;
@@ -200,7 +232,7 @@ export function mimeMatches(mime: string, filename: string, accept: string): boo
 		.map((s) => s.trim().toLowerCase())
 		.filter(Boolean);
 	const lowerMime = mime.toLowerCase();
-	const ext = filename.toLowerCase().match(/\.[^.]+$/)?.[0] ?? "";
+	const ext = filename.toLowerCase().match(FILE_EXTENSION_RE)?.[0] ?? "";
 	for (const tok of tokens) {
 		if (tok.startsWith(".")) {
 			if (ext === tok) return true;
@@ -214,13 +246,13 @@ export function mimeMatches(mime: string, filename: string, accept: string): boo
 }
 
 export function csvEscape(s: unknown): string {
-	const str = s == null ? "" : typeof s === "object" ? JSON.stringify(s) : String(s);
-	if (/[",\n\r]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+	const str = s == null ? "" : typeof s === "object" ? JSON.stringify(s) : scalarString(s);
+	if (CSV_NEEDS_QUOTES_RE.test(str)) return `"${str.replace(DOUBLE_QUOTE_RE, '""')}"`;
 	return str;
 }
 
 export function isValidFormId(id: unknown): id is string {
-	return typeof id === "string" && /^[a-z0-9][a-z0-9-]{0,63}$/.test(id);
+	return typeof id === "string" && FORM_ID_RE.test(id);
 }
 
 export function preprocessForStorage(

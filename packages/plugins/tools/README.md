@@ -25,23 +25,21 @@ registry lets other plugins add more.
 import { toolsPlugin } from "@emdash-cms/plugin-tools";
 
 export default defineConfig({
-  integrations: [
-    emdash({ plugins: [toolsPlugin()] }),
-  ],
+	integrations: [emdash({ plugins: [toolsPlugin()] })],
 });
 ```
 
 ## Built-in tools
 
-| Tool | Wraps |
-|---|---|
-| `content_list` | `ctx.content.list` |
-| `content_get` | `ctx.content.get` |
+| Tool             | Wraps                            |
+| ---------------- | -------------------------------- |
+| `content_list`   | `ctx.content.list`               |
+| `content_get`    | `ctx.content.get`                |
 | `content_search` | substring scan over a collection |
-| `task_create` | POST `tasks.create` |
-| `task_advance` | POST `tasks.transition` |
-| `memory_search` | POST `agents/memory.search` |
-| `memory_put` | POST `agents/memory.put` |
+| `task_create`    | POST `tasks.create`              |
+| `task_advance`   | POST `tasks.transition`          |
+| `memory_search`  | POST `agents/memory.search`      |
+| `memory_put`     | POST `agents/memory.put`         |
 
 That covers a typical writer-agent workflow: read source content,
 spawn sub-tasks, advance state, persist decisions.
@@ -52,21 +50,21 @@ spawn sub-tasks, advance state, persist decisions.
 import { registerTool } from "@emdash-cms/plugin-tools/registry";
 
 registerTool({
-  name: "weather_get",
-  description: "Get the current weather for a city.",
-  parameters: {
-    type: "object",
-    properties: {
-      city: { type: "string" },
-      units: { type: "string", enum: ["metric", "imperial"] },
-    },
-    required: ["city"],
-  },
-  handler: async (args, ctx) => {
-    if (!ctx.http) throw new Error("network:fetch missing");
-    const res = await ctx.http.fetch(`https://wttr.in/${args.city}?format=j1`);
-    return await res.json();
-  },
+	name: "weather_get",
+	description: "Get the current weather for a city.",
+	parameters: {
+		type: "object",
+		properties: {
+			city: { type: "string" },
+			units: { type: "string", enum: ["metric", "imperial"] },
+		},
+		required: ["city"],
+	},
+	handler: async (args, ctx) => {
+		if (!ctx.http) throw new Error("network:fetch missing");
+		const res = await ctx.http.fetch(`https://wttr.in/${args.city}?format=j1`);
+		return await res.json();
+	},
 });
 ```
 
@@ -107,8 +105,8 @@ the task's activity log.
 ```json
 // Agent record in @emdash-cms/plugin-agents
 {
-  "id": "writer-bot",
-  "tools": ["content_get", "content_search", "task_advance", "memory_search", "memory_put"]
+	"id": "writer-bot",
+	"tools": ["content_get", "content_search", "task_advance", "memory_search", "memory_put"]
 }
 ```
 

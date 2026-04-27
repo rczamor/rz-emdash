@@ -7,6 +7,8 @@
 
 import type { IngestionEvent, LangfuseDatasetItem, LangfusePrompt } from "./types.js";
 
+const TRAILING_SLASH_RE = /\/$/;
+
 export interface LangfuseConfig {
 	host: string;
 	publicKey: string;
@@ -14,15 +16,17 @@ export interface LangfuseConfig {
 	fetchImpl?: typeof fetch;
 }
 
-function authHeader(config: LangfuseConfig): string {
+/** @internal — exported for unit tests. */
+export function authHeader(config: LangfuseConfig): string {
 	// btoa is not always available in Node — encode via Buffer when present.
 	const raw = `${config.publicKey}:${config.secretKey}`;
 	const encoded = typeof Buffer !== "undefined" ? Buffer.from(raw).toString("base64") : btoa(raw);
 	return `Basic ${encoded}`;
 }
 
-function url(host: string, path: string): string {
-	return host.replace(/\/$/, "") + path;
+/** @internal — exported for unit tests. */
+export function url(host: string, path: string): string {
+	return host.replace(TRAILING_SLASH_RE, "") + path;
 }
 
 export async function ingest(events: IngestionEvent[], config: LangfuseConfig): Promise<void> {

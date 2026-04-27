@@ -39,10 +39,7 @@ export interface DriverHandlers {
 		input: ChatCompletionInput,
 		fetchImpl: DriverFetchImpl,
 	) => Promise<ChatCompletionResponse>;
-	embeddings: (
-		input: EmbeddingsInput,
-		fetchImpl: DriverFetchImpl,
-	) => Promise<EmbeddingsResponse>;
+	embeddings: (input: EmbeddingsInput, fetchImpl: DriverFetchImpl) => Promise<EmbeddingsResponse>;
 	listModels: (fetchImpl: DriverFetchImpl) => Promise<ModelInfo[]>;
 	pingHealth?: (fetchImpl: DriverFetchImpl) => Promise<boolean>;
 }
@@ -92,6 +89,12 @@ const order: string[] = [];
 export function registerDriver(driver: Driver): void {
 	if (!drivers.has(driver.id)) order.push(driver.id);
 	drivers.set(driver.id, driver);
+}
+
+/** @internal — test hook for clearing the registry between cases. */
+export function _resetDrivers(): void {
+	drivers.clear();
+	order.length = 0;
 }
 
 export function getDriver(id: string): Driver | undefined {

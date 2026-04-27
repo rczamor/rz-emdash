@@ -47,6 +47,29 @@ export interface ResolveOptions {
 }
 
 const TOKEN_RE = /\{\{|\}\}|\{([^{}]+?)\}/g;
+const YEAR_RE = /YYYY/g;
+const MONTH_RE = /MM/g;
+const DAY_RE = /DD/g;
+const HOUR_RE = /HH/g;
+const MINUTE_RE = /mm/g;
+const SECOND_RE = /ss/g;
+const COMBINING_MARK_RE = /[̀-ͯ]/g;
+const NON_SLUG_CHAR_RE = /[^a-z0-9]+/g;
+const SLUG_EDGE_DASH_RE = /^-+|-+$/g;
+
+function pad(n: number, w = 2): string {
+	return String(n).padStart(w, "0");
+}
+
+function scalarString(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+		return String(value);
+	}
+	if (typeof value === "symbol") return value.toString();
+	if (typeof value === "function" || value == null) return "";
+	return JSON.stringify(value) ?? "";
+}
 
 export async function resolveTokens(
 	input: string,
@@ -54,7 +77,7 @@ export async function resolveTokens(
 	options: ResolveOptions = {},
 ): Promise<string> {
 	if (!input || typeof input !== "string") return input ?? "";
-	const formatters = { ...DEFAULT_FORMATTERS, ...(options.formatters ?? {}) };
+	const formatters = { ...DEFAULT_FORMATTERS, ...options.formatters };
 	const missing = options.missing ?? "";
 
 	return input.replace(TOKEN_RE, (match, expr: string | undefined): string => {
@@ -88,7 +111,7 @@ function lookupValue(path: string, context: TokenContext): unknown {
 	let current: unknown = context;
 	for (const key of parts) {
 		if (current == null) return undefined;
-		if (typeof current === "object" && key in (current as object)) {
+		if (typeof current === "object" && key in current) {
 			current = (current as Record<string, unknown>)[key];
 		} else {
 			return undefined;
@@ -100,7 +123,7 @@ function lookupValue(path: string, context: TokenContext): unknown {
 function stringifyForOutput(value: unknown): string {
 	if (value instanceof Date) return value.toISOString();
 	if (typeof value === "object") return JSON.stringify(value);
-	return String(value);
+	return scalarString(value);
 }
 
 function generateUuid(): string {
@@ -122,37 +145,36 @@ function generateUuid(): string {
 // ── Built-in formatters ─────────────────────────────────────────────────────
 
 const DEFAULT_FORMATTERS: Record<string, Formatter> = {
-	upper: (v) => (v == null ? v : String(v).toUpperCase()),
-	lower: (v) => (v == null ? v : String(v).toLowerCase()),
-	trim: (v) => (v == null ? v : String(v).trim()),
+	upper: (v) => (v == null ? v : scalarString(v).toUpperCase()),
+	lower: (v) => (v == null ? v : scalarString(v).toLowerCase()),
+	trim: (v) => (v == null ? v : scalarString(v).trim()),
 	default: (v, arg) => (v == null || v === "" ? arg : v),
 	truncate: (v, arg) => {
 		if (v == null) return v;
 		const n = arg ? parseInt(arg, 10) : 100;
-		const s = String(v);
+		const s = scalarString(v);
 		return s.length > n ? s.slice(0, n) + "…" : s;
 	},
 	date: (v, arg) => {
-		const d = v instanceof Date ? v : new Date(String(v));
+		const d = v instanceof Date ? v : new Date(scalarString(v));
 		if (Number.isNaN(d.getTime())) return v;
 		const fmt = arg ?? "YYYY-MM-DD";
-		const pad = (n: number, w = 2) => String(n).padStart(w, "0");
 		return fmt
-			.replace(/YYYY/g, String(d.getUTCFullYear()))
-			.replace(/MM/g, pad(d.getUTCMonth() + 1))
-			.replace(/DD/g, pad(d.getUTCDate()))
-			.replace(/HH/g, pad(d.getUTCHours()))
-			.replace(/mm/g, pad(d.getUTCMinutes()))
-			.replace(/ss/g, pad(d.getUTCSeconds()));
+			.replace(YEAR_RE, String(d.getUTCFullYear()))
+			.replace(MONTH_RE, pad(d.getUTCMonth() + 1))
+			.replace(DAY_RE, pad(d.getUTCDate()))
+			.replace(HOUR_RE, pad(d.getUTCHours()))
+			.replace(MINUTE_RE, pad(d.getUTCMinutes()))
+			.replace(SECOND_RE, pad(d.getUTCSeconds()));
 	},
 	slug: (v) => {
 		if (v == null) return v;
-		return String(v)
+		return scalarString(v)
 			.toLowerCase()
 			.normalize("NFKD")
-			.replace(/[̀-ͯ]/g, "")
-			.replace(/[^a-z0-9]+/g, "-")
-			.replace(/^-+|-+$/g, "");
+			.replace(COMBINING_MARK_RE, "")
+			.replace(NON_SLUG_CHAR_RE, "-")
+			.replace(SLUG_EDGE_DASH_RE, "");
 	},
 	json: (v) => JSON.stringify(v),
 };

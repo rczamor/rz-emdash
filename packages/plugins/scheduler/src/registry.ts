@@ -22,7 +22,23 @@ export type JobHandler = (
 	ctx: PluginContext,
 ) => Promise<void>;
 
-const handlers = new Map<string, JobHandler>();
+const SCHEDULER_REGISTRY_STATE = Symbol.for("emdash.pluginScheduler.registry");
+
+interface SchedulerRegistryState {
+	handlers: Map<string, JobHandler>;
+}
+
+type SchedulerRegistryGlobal = typeof globalThis & {
+	[SCHEDULER_REGISTRY_STATE]?: SchedulerRegistryState;
+};
+
+function getRegistryState(): SchedulerRegistryState {
+	const global = globalThis as SchedulerRegistryGlobal;
+	global[SCHEDULER_REGISTRY_STATE] ??= { handlers: new Map() };
+	return global[SCHEDULER_REGISTRY_STATE];
+}
+
+const handlers = getRegistryState().handlers;
 
 export function registerJobHandler(name: string, handler: JobHandler): void {
 	if (handlers.has(name)) {
@@ -36,9 +52,14 @@ export function getJobHandler(name: string): JobHandler | undefined {
 }
 
 export function listJobHandlers(): string[] {
-	return Array.from(handlers.keys()).sort();
+	return [...handlers.keys()].toSorted();
 }
 
 export function unregisterJobHandler(name: string): boolean {
 	return handlers.delete(name);
+}
+
+/** @internal — test hook for clearing the registry between cases. */
+export function _resetJobHandlers(): void {
+	handlers.clear();
 }

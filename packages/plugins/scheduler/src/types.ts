@@ -54,7 +54,7 @@ export interface Job {
 export interface CreateJobInput {
 	id?: string;
 	type: Job["type"];
-	payload: Job["payload"];
+	payload: JobPayload | Job["payload"];
 	runAt: string | Date;
 	maxAttempts?: number;
 	source?: string;

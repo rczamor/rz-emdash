@@ -57,11 +57,9 @@ export function schedulerPlugin(_options: SchedulerOptions = {}): PluginDescript
 		entrypoint: "@emdash-cms/plugin-scheduler/sandbox",
 		options: {},
 		capabilities: ["read:content", "write:content", "network:fetch"],
-		// network:fetch is for the automation-job runner (it calls the
-		// automations plugin's HTTP endpoint). Allow same-origin only —
-		// callers can override via re-installing with a different
-		// allowedHosts list if their site lives elsewhere.
-		allowedHosts: ["localhost", "127.0.0.1", "*.srv1535988.hstgr.cloud", "*"],
+		// Internal plugin routes are allowed by the core HTTP layer;
+		// no external hosts are required for the automation-job runner.
+		allowedHosts: [],
 		storage: {
 			jobs: {
 				indexes: ["status", "runAt", ["status", "runAt"], "type", "source"],

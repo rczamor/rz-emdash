@@ -30,7 +30,7 @@ describe("detectBannedPhrases", () => {
 	it("matches multiple banned phrases", () => {
 		const brand = makeBrand({ banned_phrases: ["synergy", "moving forward"] });
 		const found = detectBannedPhrases("synergy moving forward", brand);
-		expect(found.sort()).toEqual(["moving forward", "synergy"]);
+		expect(found.toSorted()).toEqual(["moving forward", "synergy"]);
 	});
 
 	it("returns [] for clean text", () => {

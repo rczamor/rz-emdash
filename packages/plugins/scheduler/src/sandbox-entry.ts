@@ -19,8 +19,9 @@
  */
 
 import { definePlugin } from "emdash";
-import type { PluginContext } from "emdash";
+import type { PluginContext, WhereValue } from "emdash";
 
+import { normaliseJobPayload } from "./payload.js";
 import { runJob } from "./runners.js";
 import type { CreateJobInput, Job, JobStatus } from "./types.js";
 
@@ -59,11 +60,11 @@ async function ensureTickCron(ctx: PluginContext): Promise<void> {
 }
 
 async function persistJob(job: Job, ctx: PluginContext): Promise<void> {
-	await ctx.storage.jobs.put(job.id, job);
+	await ctx.storage.jobs!.put(job.id, job);
 }
 
 async function loadJob(id: string, ctx: PluginContext): Promise<Job | null> {
-	const v = await ctx.storage.jobs.get(id);
+	const v = await ctx.storage.jobs!.get(id);
 	return (v as Job | null) ?? null;
 }
 
@@ -86,7 +87,7 @@ async function createJob(input: CreateJobInput, ctx: PluginContext): Promise<Job
 	const job: Job = {
 		id: input.id ?? newId(),
 		type: input.type,
-		payload: input.payload.payload as Job["payload"],
+		payload: normaliseJobPayload(input),
 		runAt: runAtStr,
 		status: "pending",
 		attempts: 0,
@@ -100,10 +101,61 @@ async function createJob(input: CreateJobInput, ctx: PluginContext): Promise<Job
 
 // ── Tick ────────────────────────────────────────────────────────────────────
 
+async function executePendingJob(
+	job: Job,
+	ctx: PluginContext,
+): Promise<{ processed: number; failed: number }> {
+	if (job.status !== "pending") return { processed: 0, failed: 0 };
+
+	job.status = "running";
+	job.startedAt = NOW();
+	job.attempts++;
+	await persistJob(job, ctx);
+
+	try {
+		await runJob(job, ctx);
+		job.status = "done";
+		job.finishedAt = NOW();
+		await persistJob(job, ctx);
+		ctx.log.info("Scheduler: job done", { id: job.id, type: job.type });
+		return { processed: 1, failed: 0 };
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		job.lastError = msg;
+		let failed = 0;
+		if (job.attempts >= job.maxAttempts) {
+			job.status = "failed";
+			job.finishedAt = NOW();
+			failed = 1;
+			ctx.log.error("Scheduler: job failed terminally", {
+				id: job.id,
+				type: job.type,
+				error: msg,
+				attempts: job.attempts,
+			});
+		} else {
+			// Re-queue for next tick. Exponential-ish backoff via
+			// runAt += attempts * 60s.
+			job.status = "pending";
+			const backoffMs = job.attempts * 60_000;
+			job.runAt = new Date(Date.now() + backoffMs).toISOString();
+			ctx.log.warn("Scheduler: job will retry", {
+				id: job.id,
+				type: job.type,
+				error: msg,
+				attempts: job.attempts,
+				nextRunAt: job.runAt,
+			});
+		}
+		await persistJob(job, ctx);
+		return { processed: 0, failed };
+	}
+}
+
 async function tickOnce(ctx: PluginContext): Promise<{ processed: number; failed: number }> {
 	const now = NOW();
-	const due = await ctx.storage.jobs.query({
-		filter: { status: "pending" },
+	const due = await ctx.storage.jobs!.query({
+		where: { status: "pending" },
 		orderBy: { runAt: "asc" },
 		limit: 100,
 	});
@@ -112,50 +164,12 @@ async function tickOnce(ctx: PluginContext): Promise<{ processed: number; failed
 	let failed = 0;
 	for (const item of due.items) {
 		const job = item.data as Job;
+		if (job.status !== "pending") continue;
 		if (job.runAt > now) continue; // ordered asc, but defensive
 
-		// Claim
-		job.status = "running";
-		job.startedAt = NOW();
-		job.attempts++;
-		await persistJob(job, ctx);
-
-		try {
-			await runJob(job, ctx);
-			job.status = "done";
-			job.finishedAt = NOW();
-			await persistJob(job, ctx);
-			processed++;
-			ctx.log.info("Scheduler: job done", { id: job.id, type: job.type });
-		} catch (err) {
-			const msg = err instanceof Error ? err.message : String(err);
-			job.lastError = msg;
-			if (job.attempts >= job.maxAttempts) {
-				job.status = "failed";
-				job.finishedAt = NOW();
-				failed++;
-				ctx.log.error("Scheduler: job failed terminally", {
-					id: job.id,
-					type: job.type,
-					error: msg,
-					attempts: job.attempts,
-				});
-			} else {
-				// Re-queue for next tick. Exponential-ish backoff via
-				// runAt += attempts * 60s.
-				job.status = "pending";
-				const backoffMs = job.attempts * 60_000;
-				job.runAt = new Date(Date.now() + backoffMs).toISOString();
-				ctx.log.warn("Scheduler: job will retry", {
-					id: job.id,
-					type: job.type,
-					error: msg,
-					attempts: job.attempts,
-					nextRunAt: job.runAt,
-				});
-			}
-			await persistJob(job, ctx);
-		}
+		const stats = await executePendingJob(job, ctx);
+		processed += stats.processed;
+		failed += stats.failed;
 	}
 	return { processed, failed };
 }
@@ -183,8 +197,8 @@ async function reconcileContentJobs(event: ContentEvent, ctx: PluginContext): Pr
 	const unpublishAt = event.content.unpublish_at ?? event.content.unpublishAt;
 	const tag = `content:${event.collection}:${id}`;
 
-	const existing = await ctx.storage.jobs.query({
-		filter: { source: tag, status: "pending" },
+	const existing = await ctx.storage.jobs!.query({
+		where: { source: tag, status: "pending" },
 		limit: 50,
 	});
 
@@ -209,18 +223,22 @@ async function reconcileContentJobs(event: ContentEvent, ctx: PluginContext): Pr
 		await createJob(
 			{
 				type: "publish",
-				payload: { type: "publish", payload: { collection: event.collection, contentId: id } },
+				payload: { collection: event.collection, contentId: id },
 				runAt: scheduledAt,
 				source: tag,
 			},
 			ctx,
 		);
 	}
-	if (typeof unpublishAt === "string" && unpublishAt && new Date(unpublishAt).getTime() > Date.now()) {
+	if (
+		typeof unpublishAt === "string" &&
+		unpublishAt &&
+		new Date(unpublishAt).getTime() > Date.now()
+	) {
 		await createJob(
 			{
 				type: "unpublish",
-				payload: { type: "unpublish", payload: { collection: event.collection, contentId: id } },
+				payload: { collection: event.collection, contentId: id },
 				runAt: unpublishAt,
 				source: tag,
 			},
@@ -233,13 +251,13 @@ async function reconcileContentJobs(event: ContentEvent, ctx: PluginContext): Pr
 
 async function buildAdminPage(ctx: PluginContext) {
 	const [pending, running, done, failed] = await Promise.all([
-		ctx.storage.jobs.count({ status: "pending" }),
-		ctx.storage.jobs.count({ status: "running" }),
-		ctx.storage.jobs.count({ status: "done" }),
-		ctx.storage.jobs.count({ status: "failed" }),
+		ctx.storage.jobs!.count({ status: "pending" }),
+		ctx.storage.jobs!.count({ status: "running" }),
+		ctx.storage.jobs!.count({ status: "done" }),
+		ctx.storage.jobs!.count({ status: "failed" }),
 	]);
 
-	const recent = await ctx.storage.jobs.query({
+	const recent = await ctx.storage.jobs!.query({
 		orderBy: { createdAt: "desc" },
 		limit: 50,
 	});
@@ -285,8 +303,8 @@ async function buildAdminPage(ctx: PluginContext) {
 }
 
 async function buildPendingWidget(ctx: PluginContext) {
-	const result = await ctx.storage.jobs.query({
-		filter: { status: "pending" },
+	const result = await ctx.storage.jobs!.query({
+		where: { status: "pending" },
 		orderBy: { runAt: "asc" },
 		limit: 5,
 	});
@@ -314,19 +332,19 @@ async function buildPendingWidget(ctx: PluginContext) {
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				ctx.log.info("Scheduler plugin installed");
 				await ensureTickCron(ctx);
 			},
 		},
 		"plugin:activate": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				await ensureTickCron(ctx);
 			},
 		},
 
 		cron: {
-			handler: async (event, ctx: PluginContext) => {
+			handler: async (event: { name?: string }, ctx: PluginContext) => {
 				if (event.name !== TICK_NAME) return;
 				const stats = await tickOnce(ctx);
 				if (stats.processed + stats.failed > 0) {
@@ -336,9 +354,9 @@ export default definePlugin({
 		},
 
 		"content:afterSave": {
-			handler: async (event, ctx: PluginContext) => {
+			handler: async (event: unknown, ctx: PluginContext) => {
 				try {
-					await reconcileContentJobs(event as unknown as ContentEvent, ctx);
+					await reconcileContentJobs(event as ContentEvent, ctx);
 				} catch (err) {
 					ctx.log.warn("Scheduler: content reconcile failed", {
 						error: err instanceof Error ? err.message : String(err),
@@ -357,11 +375,11 @@ export default definePlugin({
 					Math.max(parseInt(getQueryParam(routeCtx, "limit") ?? "100", 10) || 100, 1),
 					500,
 				);
-				const filter: Record<string, unknown> = {};
+				const filter: Record<string, WhereValue> = {};
 				if (status && isValidStatus(status)) filter.status = status;
 				if (type) filter.type = type;
-				const result = await ctx.storage.jobs.query({
-					filter: Object.keys(filter).length > 0 ? filter : undefined,
+				const result = await ctx.storage.jobs!.query({
+					where: Object.keys(filter).length > 0 ? filter : undefined,
 					orderBy: { createdAt: "desc" },
 					limit,
 				});
@@ -415,9 +433,12 @@ export default definePlugin({
 				if (!body?.id) return { ok: false, error: "id required" };
 				const job = await loadJob(body.id, ctx);
 				if (!job) return { ok: false, error: "Not found" };
+				if (job.status !== "pending") {
+					return { ok: false, error: `Cannot run job in status ${job.status}` };
+				}
 				job.runAt = NOW();
 				await persistJob(job, ctx);
-				const stats = await tickOnce(ctx);
+				const stats = await executePendingJob(job, ctx);
 				return { ok: true, stats };
 			},
 		},
@@ -432,10 +453,7 @@ export default definePlugin({
 				if (interaction.type === "page_load" && interaction.page === "/scheduler") {
 					return await buildAdminPage(ctx);
 				}
-				if (
-					interaction.type === "widget_load" &&
-					interaction.widget === "scheduler-pending"
-				) {
+				if (interaction.type === "widget_load" && interaction.widget === "scheduler-pending") {
 					return await buildPendingWidget(ctx);
 				}
 				return { blocks: [] };

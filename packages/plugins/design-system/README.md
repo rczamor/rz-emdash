@@ -15,9 +15,7 @@ Formal: <https://github.com/google-labs-code/design.md/blob/main/docs/spec.md>
 import { designSystemPlugin } from "@emdash-cms/plugin-design-system";
 
 export default defineConfig({
-  integrations: [
-    emdash({ plugins: [designSystemPlugin()] }),
-  ],
+	integrations: [emdash({ plugins: [designSystemPlugin()] })],
 });
 ```
 
@@ -64,11 +62,11 @@ POST  admin                     Block Kit
 
 Three levels of findings emitted by `design.validate`:
 
-| Level | Examples |
-|---|---|
-| `error` | Duplicate level-2 section heading (spec rejects); contrast ratio below 3 |
+| Level     | Examples                                                                    |
+| --------- | --------------------------------------------------------------------------- |
+| `error`   | Duplicate level-2 section heading (spec rejects); contrast ratio below 3    |
 | `warning` | Missing `name` in frontmatter; broken `{token.ref}` in body; contrast 3-4.5 |
-| `info` | Unknown body section heading (allowed by spec, but flagged for visibility) |
+| `info`    | Unknown body section heading (allowed by spec, but flagged for visibility)  |
 
 The Block Kit admin at **Settings → Design system** renders the full
 findings table.

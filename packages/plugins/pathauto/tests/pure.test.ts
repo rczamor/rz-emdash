@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
 	applyPatternPure,
 	isValidCollectionName,
+	SEPARATOR_BREAKPOINT_RATIO,
 	slugifySegment,
 	trimSlug,
 } from "../src/pure.js";
@@ -26,24 +27,31 @@ describe("isValidCollectionName", () => {
 });
 
 describe("trimSlug", () => {
+	// With maxLength = 20, the breakpoint is 20 * 0.7 = 14. A separator must
+	// land at index > 14 within the cut window for trimSlug to keep it.
+	const max = 20;
+	const breakpoint = max * SEPARATOR_BREAKPOINT_RATIO;
+
 	it("returns slug unchanged when within limit", () => {
-		expect(trimSlug("hello", 10)).toBe("hello");
+		expect(trimSlug("hello", max)).toBe("hello");
 	});
 
-	it("hard-cuts when no separator near boundary", () => {
-		expect(trimSlug("abcdefghijklmnop", 5)).toBe("abcde");
+	it("hard-cuts when no separator falls past the breakpoint", () => {
+		// "-" lands at index 5 (well below the 14 breakpoint) → hard cut at 20.
+		const slug = "abcd-efghijklmnopqrstuvwxyz";
+		const out = trimSlug(slug, max);
+		expect(out).toBe(slug.slice(0, max));
+		expect(out.lastIndexOf("-")).toBeLessThanOrEqual(breakpoint);
 	});
 
-	it("cuts at last separator if near boundary", () => {
-		// maxLength 20, breakpoint 14; last "-" should be retained if > 14
-		expect(trimSlug("hello-world-foobar-baz", 20)).toBe("hello-world-foobar");
+	it("keeps the trailing separator when it falls past the breakpoint", () => {
+		// "-" lands at index 18 (> 14 breakpoint) → cut there, drop the tail.
+		expect(trimSlug("hello-world-foobar-baz", max)).toBe("hello-world-foobar");
 	});
 
-	it("breaks at slash", () => {
-		// max 10, breakpoint 7; "/" at 7 satisfies > 7? not strictly, so hard cut applies.
-		// Use a case where the separator is past the 70% mark.
-		expect(trimSlug("ab/cd/efghij", 10)).toBe("ab/cd/efgh");
-		expect(trimSlug("aa/bb/cc/dd-extra", 12)).toBe("aa/bb/cc/dd");
+	it("respects `/` as a separator", () => {
+		// "/" lands at index 17 (> 14 breakpoint) → cut there.
+		expect(trimSlug("aa/bb/cc/dd/eeeee/extra", max)).toBe("aa/bb/cc/dd/eeeee");
 	});
 });
 
@@ -99,10 +107,7 @@ describe("applyPatternPure", () => {
 	});
 
 	it("returns null when pattern resolves to empty", async () => {
-		const slug = await applyPatternPure(
-			{ collection: "posts", pattern: "{content.missing}" },
-			{},
-		);
+		const slug = await applyPatternPure({ collection: "posts", pattern: "{content.missing}" }, {});
 		expect(slug).toBeNull();
 	});
 

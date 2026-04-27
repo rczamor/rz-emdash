@@ -11,12 +11,15 @@
  */
 
 import { definePlugin } from "emdash";
-import type { PluginContext } from "emdash";
+import type { PluginContext, WhereValue } from "emdash";
 
-import "./built-ins.js"; // side-effect: seeds registry on load
-
+import { registerBuiltInTools } from "./built-ins.js";
 import { getTool, listTools } from "./registry.js";
 import type { InvokeInput, OpenAITool } from "./types.js";
+
+registerBuiltInTools();
+
+const TRAILING_SLASH_RE = /\/$/;
 
 interface RouteCtx {
 	input: unknown;
@@ -49,26 +52,24 @@ function toolsToOpenAISpec(allowList?: Set<string>): OpenAITool[] {
 async function getAllowListForAgent(
 	agentId: string,
 	ctx: PluginContext,
-): Promise<Set<string> | undefined> {
-	if (!ctx.http) return undefined;
-	const baseUrl =
-		((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(
-			/\/$/,
-			"",
-		);
+): Promise<Set<string> | null> {
+	if (!ctx.http) return null;
+	const baseUrl = (
+		(ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321"
+	).replace(TRAILING_SLASH_RE, "");
 	try {
 		const res = await ctx.http.fetch(
 			`${baseUrl}/_emdash/api/plugins/agents/agents.get?id=${encodeURIComponent(agentId)}`,
 		);
-		if (!res.ok) return undefined;
+		if (!res.ok) return null;
 		const json = (await res.json()) as {
 			data?: { ok?: boolean; agent?: { tools?: string[] } };
 		};
+		if (json.data?.ok === false) return null;
 		const tools = json.data?.agent?.tools;
-		if (!tools || tools.length === 0) return undefined;
-		return new Set(tools);
+		return new Set(tools ?? []);
 	} catch {
-		return undefined;
+		return null;
 	}
 }
 
@@ -85,7 +86,7 @@ interface InvocationRecord {
 
 async function recordInvocation(record: InvocationRecord, ctx: PluginContext): Promise<void> {
 	try {
-		await ctx.storage.invocations.put(record.id, record);
+		await ctx.storage.invocations!.put(record.id, record);
 	} catch (err) {
 		ctx.log.warn("Tools: failed to record invocation", {
 			error: err instanceof Error ? err.message : String(err),
@@ -102,11 +103,9 @@ async function appendTaskActivity(
 	ctx: PluginContext,
 ): Promise<void> {
 	if (!ctx.http) return;
-	const baseUrl =
-		((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(
-			/\/$/,
-			"",
-		);
+	const baseUrl = (
+		(ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321"
+	).replace(TRAILING_SLASH_RE, "");
 	try {
 		// Tasks plugin doesn't have an explicit "activity append" route —
 		// activity is appended by mutations. We log via a comment instead,
@@ -135,10 +134,8 @@ async function appendTaskActivity(
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
-				ctx.log.info(
-					`Tools plugin installed (${listTools().length} built-in tools registered)`,
-				);
+			handler: async (_event: unknown, ctx: PluginContext) => {
+				ctx.log.info(`Tools plugin installed (${listTools().length} built-in tools registered)`);
 			},
 		},
 	},
@@ -179,9 +176,14 @@ export default definePlugin({
 				const allowParam = getQueryParam(routeCtx, "allow");
 				let allowList: Set<string> | undefined;
 				if (allowParam) {
-					allowList = new Set(allowParam.split(",").map((s) => s.trim()).filter(Boolean));
+					allowList = new Set(
+						allowParam
+							.split(",")
+							.map((s) => s.trim())
+							.filter(Boolean),
+					);
 				} else if (agentId) {
-					allowList = await getAllowListForAgent(agentId, ctx);
+					allowList = (await getAllowListForAgent(agentId, ctx)) ?? new Set();
 				}
 				return { tools: toolsToOpenAISpec(allowList) };
 			},
@@ -193,6 +195,15 @@ export default definePlugin({
 				if (!body || !body.name) return { ok: false, error: "name required" };
 				const tool = getTool(body.name);
 				if (!tool) return { ok: false, error: `Unknown tool: ${body.name}` };
+				if (body.agentId) {
+					const allowList = await getAllowListForAgent(body.agentId, ctx);
+					if (!allowList) {
+						return { ok: false, error: "Unable to verify agent tool allowlist" };
+					}
+					if (!allowList.has(body.name)) {
+						return { ok: false, error: `Tool not allowed for agent: ${body.name}` };
+					}
+				}
 
 				const start = Date.now();
 				const id = newInvocationId();
@@ -236,11 +247,11 @@ export default definePlugin({
 					Math.max(parseInt(getQueryParam(routeCtx, "limit") ?? "50", 10) || 50, 1),
 					500,
 				);
-				const filter: Record<string, unknown> = {};
+				const filter: Record<string, WhereValue> = {};
 				if (tool) filter.tool = tool;
 				if (task_id) filter.task_id = task_id;
-				const result = await ctx.storage.invocations.query({
-					filter: Object.keys(filter).length > 0 ? filter : undefined,
+				const result = await ctx.storage.invocations!.query({
+					where: Object.keys(filter).length > 0 ? filter : undefined,
 					orderBy: { createdAt: "desc" },
 					limit,
 				});
@@ -255,7 +266,7 @@ export default definePlugin({
 					return { blocks: [] };
 				}
 				const tools = listTools();
-				const recent = await ctx.storage.invocations.query({
+				const recent = await ctx.storage.invocations!.query({
 					orderBy: { createdAt: "desc" },
 					limit: 25,
 				});
@@ -288,7 +299,8 @@ export default definePlugin({
 							],
 							rows: tools.map((t) => ({
 								name: t.name,
-								description: t.description.length > 100 ? t.description.slice(0, 97) + "…" : t.description,
+								description:
+									t.description.length > 100 ? t.description.slice(0, 97) + "…" : t.description,
 								capabilities: (t.capabilities ?? []).join(", "),
 							})),
 						},

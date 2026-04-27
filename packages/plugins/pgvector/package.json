@@ -22,13 +22,18 @@
 		"vector-search"
 	],
 	"license": "MIT",
+	"scripts": {
+		"test": "vitest run"
+	},
 	"peerDependencies": {
 		"emdash": "workspace:>=0.7.0"
 	},
 	"dependencies": {
-		"pg": "^8.0.0",
-		"@emdash-cms/plugin-tools": "workspace:*"
+		"@emdash-cms/plugin-tools": "workspace:*",
+		"pg": "^8.0.0"
 	},
-	"devDependencies": {},
-	"optionalDependencies": {}
+	"devDependencies": {
+		"@types/pg": "^8.16.0",
+		"vitest": "catalog:"
+	}
 }

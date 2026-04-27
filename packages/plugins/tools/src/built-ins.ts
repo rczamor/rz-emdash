@@ -13,18 +13,26 @@ import type { PluginContext } from "emdash";
 import { _registerBuiltin } from "./registry.js";
 import type { Tool } from "./types.js";
 
-function asString(v: unknown, fallback = ""): string {
+const TRAILING_SLASH_RE = /\/$/;
+
+/** @internal — exported for unit tests. */
+export function asString(v: unknown, fallback = ""): string {
 	return typeof v === "string" ? v : fallback;
 }
 
-function asNumber(v: unknown, fallback?: number): number | undefined {
+/** @internal — exported for unit tests. */
+export function asNumber(v: unknown, fallback?: number): number | undefined {
 	if (typeof v === "number") return v;
 	if (typeof v === "string" && !Number.isNaN(Number(v))) return Number(v);
 	return fallback;
 }
 
-function getSiteUrl(ctx: PluginContext): string {
-	return ((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(/\/$/, "");
+/** @internal — exported for unit tests. */
+export function getSiteUrl(ctx: PluginContext): string {
+	return ((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(
+		TRAILING_SLASH_RE,
+		"",
+	);
 }
 
 const contentList: Tool = {
@@ -44,9 +52,9 @@ const contentList: Tool = {
 	capabilities: ["read:content"],
 	handler: async (args, ctx) => {
 		if (!ctx.content) throw new Error("read:content capability missing");
-		const result = await ctx.content.list({
-			collection: asString(args.collection),
-			status: asString(args.status) as "draft" | "published" | "scheduled" | undefined,
+		const status = asString(args.status);
+		const result = await ctx.content.list(asString(args.collection), {
+			where: status ? { status } : undefined,
 			limit: asNumber(args.limit, 25),
 			cursor: asString(args.cursor) || undefined,
 		});
@@ -91,11 +99,10 @@ const contentSearch: Tool = {
 		if (!ctx.content) throw new Error("read:content capability missing");
 		const q = asString(args.q).toLowerCase();
 		const limit = asNumber(args.limit, 10) ?? 10;
-		const result = await ctx.content.list({
-			collection: asString(args.collection),
+		const result = await ctx.content.list(asString(args.collection), {
 			limit: 200,
 		});
-		const items = (result.items ?? []) as Array<Record<string, unknown>>;
+		const items = (result.items ?? []) as unknown as Array<Record<string, unknown>>;
 		const matches = items.filter((it) => JSON.stringify(it).toLowerCase().includes(q));
 		return { items: matches.slice(0, limit), totalScanned: items.length };
 	},
@@ -225,11 +232,18 @@ const memoryPut: Tool = {
 	},
 };
 
-// Seed registry on module load.
-_registerBuiltin(contentList);
-_registerBuiltin(contentGet);
-_registerBuiltin(contentSearch);
-_registerBuiltin(taskCreate);
-_registerBuiltin(taskAdvance);
-_registerBuiltin(memorySearch);
-_registerBuiltin(memoryPut);
+const BUILT_IN_TOOLS = [
+	contentList,
+	contentGet,
+	contentSearch,
+	taskCreate,
+	taskAdvance,
+	memorySearch,
+	memoryPut,
+];
+
+export function registerBuiltInTools(): void {
+	for (const tool of BUILT_IN_TOOLS) {
+		_registerBuiltin(tool);
+	}
+}

@@ -23,9 +23,9 @@
  *   content:afterSave  if collection has auto-embed config, embed + upsert
  */
 
+import { registerTool } from "@emdash-cms/plugin-tools/registry";
 import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
-import { registerTool } from "@emdash-cms/plugin-tools/registry";
 
 import {
 	bulkUpsertEmbeddings,
@@ -41,6 +41,8 @@ import {
 } from "./db.js";
 import type { AutoEmbedConfig, SearchInput, UpsertEmbeddingInput } from "./types.js";
 
+const TRAILING_SLASH_RE = /\/$/;
+
 interface RouteCtx {
 	input: unknown;
 	request: Request;
@@ -55,7 +57,10 @@ function getDefaultDimension(): number {
 }
 
 function siteUrl(ctx: PluginContext): string {
-	return (((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321") as string).replace(/\/$/, "");
+	return ((ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321").replace(
+		TRAILING_SLASH_RE,
+		"",
+	);
 }
 
 /**
@@ -98,7 +103,7 @@ async function embedTextViaGateway(
 			const data = json.data?.response;
 			const embedding = data?.data?.[0]?.embedding;
 			if (!embedding) continue;
-			return { embedding, model: data!.model };
+			return { embedding, model: data.model };
 		} catch (err) {
 			ctx.log.warn("pgvector: gateway embed attempt failed", {
 				path,
@@ -163,7 +168,10 @@ registerTool({
 	parameters: {
 		type: "object",
 		properties: {
-			text: { type: "string", description: "Query text — auto-embedded via configured LLM gateway" },
+			text: {
+				type: "string",
+				description: "Query text — auto-embedded via configured LLM gateway",
+			},
 			embedding: {
 				type: "array",
 				items: { type: "number" },
@@ -181,7 +189,8 @@ registerTool({
 			args.metadata && typeof args.metadata === "object"
 				? (args.metadata as Record<string, unknown>)
 				: undefined;
-		const collection = typeof args.source_collection === "string" ? args.source_collection : undefined;
+		const collection =
+			typeof args.source_collection === "string" ? args.source_collection : undefined;
 
 		let embedding: number[] | undefined;
 		if (Array.isArray(args.embedding)) {
@@ -302,7 +311,7 @@ async function buildAdminPage(ctx: PluginContext) {
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				try {
 					await ensureSchemaForDimension(getDefaultDimension());
 					await discoverDimensions();
@@ -315,7 +324,7 @@ export default definePlugin({
 			},
 		},
 		"plugin:activate": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				try {
 					await ensureSchemaForDimension(getDefaultDimension());
 					await discoverDimensions();
@@ -328,9 +337,9 @@ export default definePlugin({
 		},
 
 		"content:afterSave": {
-			handler: async (event, ctx: PluginContext) => {
-				const collection = (event as unknown as { collection: string }).collection;
-				const content = (event as unknown as { content: Record<string, unknown> }).content;
+			handler: async (event: unknown, ctx: PluginContext) => {
+				const collection = (event as { collection: string }).collection;
+				const content = (event as { content: Record<string, unknown> }).content;
 				const config = await getAutoEmbed(collection, ctx);
 				if (!config) return;
 				const idField = config.idField ?? "id";
@@ -453,15 +462,13 @@ export default definePlugin({
 
 		"search.byText": {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| {
-							text?: string;
-							model?: string;
-							k?: number;
-							source_collection?: string;
-							metadata?: Record<string, unknown>;
-					  }
-					| null;
+				const body = routeCtx.input as {
+					text?: string;
+					model?: string;
+					k?: number;
+					source_collection?: string;
+					metadata?: Record<string, unknown>;
+				} | null;
 				if (!body || !body.text) return { ok: false, error: "text required" };
 				const embed = await embedTextViaGateway(body.text, body.model, ctx);
 				if (!embed) return { ok: false, error: "Failed to embed text via openrouter" };
@@ -481,14 +488,12 @@ export default definePlugin({
 
 		delete: {
 			handler: async (routeCtx: RouteCtx, _ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| {
-							source_collection?: string;
-							source_id?: string;
-							model?: string;
-							dimension?: number;
-					  }
-					| null;
+				const body = routeCtx.input as {
+					source_collection?: string;
+					source_id?: string;
+					model?: string;
+					dimension?: number;
+				} | null;
 				if (!body || !body.source_collection || !body.source_id) {
 					return { ok: false, error: "source_collection + source_id required" };
 				}
@@ -536,14 +541,12 @@ export default definePlugin({
 
 		"auto-embed.set": {
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
-				const body = routeCtx.input as
-					| {
-							collection?: string;
-							fields?: string[];
-							model?: string;
-							idField?: string;
-					  }
-					| null;
+				const body = routeCtx.input as {
+					collection?: string;
+					fields?: string[];
+					model?: string;
+					idField?: string;
+				} | null;
 				if (
 					!body ||
 					!body.collection ||

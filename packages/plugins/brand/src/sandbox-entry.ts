@@ -14,10 +14,12 @@
  */
 
 import { definePlugin } from "emdash";
-import type { PluginContext } from "emdash";
+import type { PluginContext, WhereClause, WhereValue } from "emdash";
 
 import { detectBannedPhrases } from "./client.js";
 import type { Brand, CreateBrandInput, UpdateBrandInput } from "./types.js";
+
+const BRAND_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 interface RouteCtx {
 	input: unknown;
@@ -31,21 +33,21 @@ function getQueryParam(routeCtx: RouteCtx, key: string): string | undefined {
 }
 
 function isValidId(id: unknown): id is string {
-	return typeof id === "string" && /^[a-z0-9][a-z0-9-]{0,63}$/.test(id);
+	return typeof id === "string" && BRAND_ID_RE.test(id);
 }
 
 async function loadBrand(id: string, ctx: PluginContext): Promise<Brand | null> {
-	const v = await ctx.storage.brands.get(id);
+	const v = await ctx.storage.brands!.get(id);
 	return (v as Brand | null) ?? null;
 }
 
 async function persistBrand(brand: Brand, ctx: PluginContext): Promise<void> {
-	await ctx.storage.brands.put(brand.id, brand);
+	await ctx.storage.brands!.put(brand.id, brand);
 }
 
-async function listBrands(filter: Record<string, unknown> | undefined, ctx: PluginContext): Promise<Brand[]> {
-	const result = await ctx.storage.brands.query({
-		filter,
+async function listBrands(filter: WhereClause | undefined, ctx: PluginContext): Promise<Brand[]> {
+	const result = await ctx.storage.brands!.query({
+		where: filter,
 		orderBy: { created_at: "desc" },
 		limit: 200,
 	});
@@ -53,10 +55,10 @@ async function listBrands(filter: Record<string, unknown> | undefined, ctx: Plug
 }
 
 async function findActive(locale: string | undefined, ctx: PluginContext): Promise<Brand | null> {
-	const filter: Record<string, unknown> = { active: true };
+	const filter: Record<string, WhereValue> = { active: true };
 	if (locale) filter.locale = locale;
-	const result = await ctx.storage.brands.query({
-		filter,
+	const result = await ctx.storage.brands!.query({
+		where: filter,
 		orderBy: { created_at: "desc" },
 		limit: 1,
 	});
@@ -66,7 +68,7 @@ async function findActive(locale: string | undefined, ctx: PluginContext): Promi
 async function createBrand(input: CreateBrandInput, ctx: PluginContext): Promise<Brand> {
 	if (!isValidId(input.id)) throw new Error("Invalid id");
 	if (!input.name || !input.positioning) throw new Error("name and positioning are required");
-	if (await ctx.storage.brands.exists(input.id)) {
+	if (await ctx.storage.brands!.exists(input.id)) {
 		throw new Error("Brand with that id already exists");
 	}
 	const brand: Brand = {
@@ -228,7 +230,7 @@ async function buildAdminPage(ctx: PluginContext) {
 export default definePlugin({
 	hooks: {
 		"plugin:install": {
-			handler: async (_event, ctx: PluginContext) => {
+			handler: async (_event: unknown, ctx: PluginContext) => {
 				ctx.log.info("Brand plugin installed");
 			},
 		},
@@ -300,7 +302,7 @@ export default definePlugin({
 			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
 				const body = routeCtx.input as { id?: unknown } | null;
 				if (!body || !isValidId(body.id)) return { ok: false, error: "id required" };
-				const removed = await ctx.storage.brands.delete(body.id);
+				const removed = await ctx.storage.brands!.delete(body.id);
 				return { ok: true, removed };
 			},
 		},
@@ -330,10 +332,17 @@ export default definePlugin({
 					return await buildAdminPage(ctx);
 				}
 
-				if (interaction.type === "block_action" && interaction.action_id === "activate_brand" && isValidId(interaction.value)) {
+				if (
+					interaction.type === "block_action" &&
+					interaction.action_id === "activate_brand" &&
+					isValidId(interaction.value)
+				) {
 					try {
 						await activateBrand(interaction.value, ctx);
-						return { ...(await buildAdminPage(ctx)), toast: { message: "Activated", type: "success" } };
+						return {
+							...(await buildAdminPage(ctx)),
+							toast: { message: "Activated", type: "success" },
+						};
 					} catch (err) {
 						return {
 							...(await buildAdminPage(ctx)),
@@ -342,8 +351,12 @@ export default definePlugin({
 					}
 				}
 
-				if (interaction.type === "block_action" && interaction.action_id === "delete_brand" && isValidId(interaction.value)) {
-					await ctx.storage.brands.delete(interaction.value);
+				if (
+					interaction.type === "block_action" &&
+					interaction.action_id === "delete_brand" &&
+					isValidId(interaction.value)
+				) {
+					await ctx.storage.brands!.delete(interaction.value);
 					return { ...(await buildAdminPage(ctx)), toast: { message: "Deleted", type: "success" } };
 				}
 

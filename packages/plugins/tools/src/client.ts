@@ -5,6 +5,8 @@
 
 import type { OpenAITool } from "./types.js";
 
+const TRAILING_SLASH_RE = /\/$/;
+
 const BASE = "/_emdash/api/plugins/tools";
 
 interface ClientOptions {
@@ -13,7 +15,7 @@ interface ClientOptions {
 }
 
 function urlFor(path: string, options: ClientOptions): string {
-	return (options.baseUrl ?? "").replace(/\/$/, "") + `${BASE}${path}`;
+	return (options.baseUrl ?? "").replace(TRAILING_SLASH_RE, "") + `${BASE}${path}`;
 }
 
 export async function fetchOpenAISpec(
@@ -32,6 +34,7 @@ export async function fetchOpenAISpec(
 
 export interface InvokeOptions {
 	taskId?: string;
+	agentId?: string;
 }
 
 export interface InvokeResponse {
@@ -51,7 +54,12 @@ export async function invokeTool(
 	const res = await fetchImpl(urlFor("/tools.invoke", options), {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ name, arguments: args, taskId: options.taskId }),
+		body: JSON.stringify({
+			name,
+			arguments: args,
+			taskId: options.taskId,
+			agentId: options.agentId,
+		}),
 	});
 	if (!res.ok) return { ok: false, tool: name, error: `tools.invoke returned ${res.status}` };
 	const json = (await res.json()) as { data?: InvokeResponse };

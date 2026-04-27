@@ -205,6 +205,8 @@ export type {
 	PluginCapability,
 	PluginContext,
 	PluginStorageConfig,
+	WhereClause,
+	WhereValue,
 	StorageCollection,
 	KVAccess,
 	ContentAccess,
