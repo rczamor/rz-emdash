@@ -258,9 +258,9 @@ export default definePlugin({
 
 				const stored = await ctx.storage.forms!.get(formId);
 				if (!stored) return { ok: false, error: "Form not found" };
-				const fdef = (stored as FormDefinition).fields.find(
-					(f) => f.name === fieldName && f.type === "file",
-				);
+				const formDef = stored as FormDefinition;
+				if (!formDef.enabled) return { ok: false, error: "Form is disabled" };
+				const fdef = formDef.fields.find((f) => f.name === fieldName && f.type === "file");
 				if (!fdef) return { ok: false, error: "Field is not a file field" };
 
 				const max = fdef.maxSizeBytes ?? DEFAULT_MAX_FILE_BYTES;

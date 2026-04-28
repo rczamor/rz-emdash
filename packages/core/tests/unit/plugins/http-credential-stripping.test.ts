@@ -146,6 +146,22 @@ describe("createHttpAccess credential stripping", () => {
 		// Call 2: same-origin hop on b (still stripped -- not re-added)
 		expect(headersOfCall(2).get("authorization")).toBeNull();
 	});
+
+	it("does not mint internal plugin auth after an external redirect into the plugin API", async () => {
+		mockFetch
+			.mockResolvedValueOnce(
+				redirectResponse("https://cms.example.test/_emdash/api/plugins/agents/private"),
+			)
+			.mockResolvedValueOnce(okResponse());
+
+		const http = createHttpAccess("tools", ["a.example.com"], "https://cms.example.test");
+		await http.fetch("https://a.example.com/start");
+
+		const h = headersOfCall(1);
+		expect(h.get("x-emdash-internal-plugin")).toBeNull();
+		expect(h.get("x-emdash-internal-plugin-from")).toBeNull();
+		expect(h.get("x-emdash-request")).toBeNull();
+	});
 });
 
 // =============================================================================

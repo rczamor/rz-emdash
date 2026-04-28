@@ -135,12 +135,13 @@ async function runAgentAwareChat(
 
 	if (body.agent_id) {
 		const compiled = await compileAgentSystemPrompt(body.agent_id, 10, ctx);
-		if (compiled) {
-			messages = [{ role: "system", content: compiled.systemPrompt }, ...messages];
-			if (!model) model = compiled.agentModel;
-			if (!tools && compiled.agentTools.length > 0) {
-				tools = await fetchAgentToolsForOpenAI(body.agent_id, ctx);
-			}
+		if (!compiled) {
+			return { ok: false, error: "Agent not found or inactive" };
+		}
+		messages = [{ role: "system", content: compiled.systemPrompt }, ...messages];
+		if (!model) model = compiled.agentModel;
+		if (!tools && compiled.agentTools.length > 0) {
+			tools = await fetchAgentToolsForOpenAI(body.agent_id, ctx);
 		}
 	}
 
@@ -157,7 +158,7 @@ async function runAgentAwareChat(
 
 	if ((tools && tools.length > 0) || body.useTools) {
 		if (!tools && body.useTools) {
-			tools = await fetchAgentToolsForOpenAI(undefined, ctx);
+			tools = await fetchAgentToolsForOpenAI(body.agent_id, ctx);
 		}
 		const result = await runChatLoop(
 			{

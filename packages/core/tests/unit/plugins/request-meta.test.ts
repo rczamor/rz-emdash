@@ -432,6 +432,18 @@ describe("extractRequestMeta", () => {
 			expect(result["x-custom"]).toBe("safe");
 		});
 
+		it("strips internal plugin auth headers", () => {
+			const headers = new Headers({
+				"x-emdash-internal-plugin": "secret",
+				"x-emdash-internal-plugin-from": "tools",
+				"x-custom": "safe",
+			});
+			const result = sanitizeHeadersForSandbox(headers);
+			expect(result).not.toHaveProperty("x-emdash-internal-plugin");
+			expect(result).not.toHaveProperty("x-emdash-internal-plugin-from");
+			expect(result["x-custom"]).toBe("safe");
+		});
+
 		it("passes through safe headers unchanged", () => {
 			const headers = new Headers({
 				"content-type": "application/json",

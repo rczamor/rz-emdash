@@ -173,6 +173,8 @@ const SANDBOX_STRIPPED_HEADERS = new Set([
 	"cf-access-client-id",
 	"cf-access-client-secret",
 	"x-emdash-request",
+	"x-emdash-internal-plugin",
+	"x-emdash-internal-plugin-from",
 ]);
 
 /**

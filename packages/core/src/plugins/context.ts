@@ -627,6 +627,10 @@ export function createHttpAccess(
 			const fetchInput = getFetchInput(input, init);
 			let currentUrl = fetchInput.url;
 			let currentInit = fetchInput.init;
+			let internalPluginAuthAllowed = isInternalPluginApiUrl(
+				new URL(currentUrl),
+				normalizedInternalOrigin,
+			);
 
 			for (let i = 0; i <= MAX_PLUGIN_REDIRECTS; i++) {
 				const parsed = new URL(currentUrl);
@@ -660,7 +664,9 @@ export function createHttpAccess(
 				}
 
 				const response = await globalThis.fetch(currentUrl, {
-					...(isInternalPluginUrl ? withInternalPluginHeaders(pluginId, currentInit) : currentInit),
+					...(isInternalPluginUrl && internalPluginAuthAllowed
+						? withInternalPluginHeaders(pluginId, currentInit)
+						: currentInit),
 					redirect: "manual",
 				});
 
@@ -677,8 +683,11 @@ export function createHttpAccess(
 
 				// Resolve relative redirects; strip credentials on cross-origin hops
 				const previousOrigin = new URL(currentUrl).origin;
-				currentUrl = new URL(location, currentUrl).href;
-				const nextOrigin = new URL(currentUrl).origin;
+				const nextUrl = new URL(location, currentUrl);
+				currentUrl = nextUrl.href;
+				const nextOrigin = nextUrl.origin;
+				internalPluginAuthAllowed =
+					internalPluginAuthAllowed && isInternalPluginApiUrl(nextUrl, normalizedInternalOrigin);
 
 				if (previousOrigin !== nextOrigin && currentInit) {
 					currentInit = stripCredentialHeaders(currentInit);

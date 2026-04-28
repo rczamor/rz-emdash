@@ -987,6 +987,7 @@ function PluginBlockModal({
 	onClose: () => void;
 	onInsert: (values: Record<string, unknown>) => void;
 }) {
+	const { t } = useLingui();
 	const [formValues, setFormValues] = React.useState<Record<string, unknown>>({});
 	const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -1068,7 +1069,7 @@ function PluginBlockModal({
 								ref={inputRef}
 								type="url"
 								placeholder={block?.placeholder || "Enter URL..."}
-								aria-label={block?.placeholder || "URL"}
+								aria-label={block?.placeholder || t`URL`}
 								value={typeof formValues.id === "string" ? formValues.id : ""}
 								onChange={(e) => handleFieldChange("id", e.target.value)}
 							/>
