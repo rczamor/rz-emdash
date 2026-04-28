@@ -127,12 +127,13 @@ async function runAgentAwareChat(
 
 	if (body.agent_id) {
 		const compiled = await compileAgentSystemPrompt(body.agent_id, 10, ctx);
-		if (compiled) {
-			messages = [{ role: "system", content: compiled.systemPrompt }, ...messages];
-			if (!model) model = compiled.agentModel;
-			if (!tools && compiled.agentTools.length > 0) {
-				tools = await fetchAgentToolsForOpenAI(body.agent_id, ctx);
-			}
+		if (!compiled) {
+			return { ok: false, error: "Agent not found or inactive" };
+		}
+		messages = [{ role: "system", content: compiled.systemPrompt }, ...messages];
+		if (!model) model = compiled.agentModel;
+		if (!tools && compiled.agentTools.length > 0) {
+			tools = await fetchAgentToolsForOpenAI(body.agent_id, ctx);
 		}
 	}
 
@@ -152,9 +153,12 @@ async function runAgentAwareChat(
 
 	// If tools are present (or useTools requested), run the loop.
 	if ((tools && tools.length > 0) || body.useTools) {
-		// If useTools is requested but no tools given and no agent_id, fetch all.
+		// Scope the fallback fetch to the agent's allowlist when an
+		// agent_id was supplied; the unscoped path returns every
+		// registered tool, which would let the model attempt calls
+		// the agent isn't permitted to make.
 		if (!tools && body.useTools) {
-			tools = await fetchAgentToolsForOpenAI(undefined, ctx);
+			tools = await fetchAgentToolsForOpenAI(body.agent_id, ctx);
 		}
 		const result = await runChatLoop(
 			{
