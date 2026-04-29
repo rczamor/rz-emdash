@@ -232,10 +232,468 @@ const memoryPut: Tool = {
 	},
 };
 
+// =====================================================================
+// Content write tools (M2)
+// =====================================================================
+
+/**
+ * Tools that mutate content. All require `write:content` capability.
+ *
+ * Approval gates: `content_publish` always requires plan-mode approval
+ * (M3); `content_update` requires it when the target item is already
+ * published; `content_delete` always requires it. Approval is
+ * communicated by returning `{ ok: false, paused_for_human: {...} }`
+ * which the runs harness sees and transitions the run to
+ * `awaiting_approval`. M3 wires the approval token check.
+ */
+
+const PAUSED_FOR_PUBLISH = (collection: string, id: string, data: Record<string, unknown>) => ({
+	ok: false as const,
+	paused_for_human: {
+		kind: "tool-approval",
+		tool: "content_publish",
+		args: { collection, id, data },
+		reason: "Publishing to live content always requires human approval.",
+	},
+});
+
+const contentCreate: Tool = {
+	name: "content_create",
+	description:
+		"Create a new content item in a collection. Status defaults to 'draft'. Returns the created item's id and slug. Use content_publish (which requires approval) to take a draft live.",
+	parameters: {
+		type: "object",
+		properties: {
+			collection: { type: "string", description: "Collection slug" },
+			data: {
+				type: "object",
+				description: "Field values keyed by field name. May include 'slug' and 'seo'.",
+				additionalProperties: true,
+			},
+		},
+		required: ["collection", "data"],
+	},
+	capabilities: ["write:content"],
+	handler: async (args, ctx) => {
+		const content = ctx.content as
+			| { create?: (c: string, d: Record<string, unknown>) => Promise<unknown> }
+			| undefined;
+		if (!content?.create) throw new Error("write:content capability missing");
+		const collection = asString(args.collection);
+		const data = (args.data ?? {}) as Record<string, unknown>;
+		// Force draft status on create — agents must explicitly publish via
+		// content_publish (which is always gated by approval).
+		const result = await content.create(collection, { ...data, status: "draft" });
+		return result;
+	},
+};
+
+const contentUpdate: Tool = {
+	name: "content_update",
+	description:
+		"Update an existing content item. If the target is already published, this requires plan-mode approval before executing. Drafts can be updated freely.",
+	parameters: {
+		type: "object",
+		properties: {
+			collection: { type: "string" },
+			id: { type: "string", description: "Slug or ULID" },
+			data: { type: "object", additionalProperties: true },
+		},
+		required: ["collection", "id", "data"],
+	},
+	capabilities: ["write:content"],
+	handler: async (args, ctx) => {
+		const content = ctx.content as
+			| {
+					get?: (c: string, id: string) => Promise<{ status?: string } | null>;
+					update?: (
+						c: string,
+						id: string,
+						d: Record<string, unknown>,
+					) => Promise<unknown>;
+			  }
+			| undefined;
+		if (!content?.update || !content?.get) throw new Error("write:content capability missing");
+		const collection = asString(args.collection);
+		const id = asString(args.id);
+		const data = (args.data ?? {}) as Record<string, unknown>;
+
+		// Approval gate: published items require approval; drafts pass.
+		const existing = await content.get(collection, id);
+		if (existing?.status === "published") {
+			return {
+				ok: false,
+				paused_for_human: {
+					kind: "tool-approval",
+					tool: "content_update",
+					args: { collection, id, data },
+					reason: "Editing live content requires human approval.",
+				},
+			};
+		}
+		return await content.update(collection, id, data);
+	},
+};
+
+const contentPublish: Tool = {
+	name: "content_publish",
+	description:
+		"Transition a content item to status 'published'. Always requires plan-mode approval. M9 (validation gates) inserts brand/moderation/SEO checks before approval is requested.",
+	parameters: {
+		type: "object",
+		properties: {
+			collection: { type: "string" },
+			id: { type: "string" },
+			data: {
+				type: "object",
+				description: "Optional final field updates applied along with the status change.",
+				additionalProperties: true,
+			},
+		},
+		required: ["collection", "id"],
+	},
+	capabilities: ["write:content"],
+	handler: async (args, _ctx) => {
+		const collection = asString(args.collection);
+		const id = asString(args.id);
+		const data = (args.data ?? {}) as Record<string, unknown>;
+		// Always pause for approval. M3's runs.resume verifies the
+		// approval token and re-invokes via the resume path; this tool
+		// is never executed without approval.
+		return PAUSED_FOR_PUBLISH(collection, id, { ...data, status: "published" });
+	},
+};
+
+const contentSchedule: Tool = {
+	name: "content_schedule",
+	description:
+		"Schedule a content item to be published at a future timestamp. Sets `scheduled_at`; the scheduler plugin handles the actual flip on its tick.",
+	parameters: {
+		type: "object",
+		properties: {
+			collection: { type: "string" },
+			id: { type: "string" },
+			scheduled_at: { type: "string", description: "ISO timestamp" },
+		},
+		required: ["collection", "id", "scheduled_at"],
+	},
+	capabilities: ["write:content"],
+	handler: async (args, ctx) => {
+		const content = ctx.content as
+			| {
+					update?: (
+						c: string,
+						id: string,
+						d: Record<string, unknown>,
+					) => Promise<unknown>;
+			  }
+			| undefined;
+		if (!content?.update) throw new Error("write:content capability missing");
+		return await content.update(asString(args.collection), asString(args.id), {
+			scheduled_at: asString(args.scheduled_at),
+		});
+	},
+};
+
+const contentDelete: Tool = {
+	name: "content_delete",
+	description:
+		"Delete a content item. Always requires plan-mode approval, even for drafts.",
+	parameters: {
+		type: "object",
+		properties: {
+			collection: { type: "string" },
+			id: { type: "string" },
+		},
+		required: ["collection", "id"],
+	},
+	capabilities: ["write:content"],
+	handler: async (args, _ctx) => {
+		const collection = asString(args.collection);
+		const id = asString(args.id);
+		return {
+			ok: false,
+			paused_for_human: {
+				kind: "tool-approval",
+				tool: "content_delete",
+				args: { collection, id },
+				reason: "Deleting content requires human approval, even for drafts.",
+			},
+		};
+	},
+};
+
+// =====================================================================
+// Media tools (M2)
+// =====================================================================
+
+const mediaUpload: Tool = {
+	name: "media_upload",
+	description:
+		"Upload a media item by fetching a URL (host allowlist + SSRF enforced) or by inlined base64 bytes. Returns the created media id and public URL.",
+	parameters: {
+		type: "object",
+		properties: {
+			filename: { type: "string" },
+			contentType: { type: "string", description: "MIME type, e.g. 'image/png'" },
+			source_url: {
+				type: "string",
+				description: "URL to fetch the bytes from. Must be allowlisted in the agent's plugin config.",
+			},
+			bytes_base64: {
+				type: "string",
+				description: "Alternative to source_url. Raw bytes encoded as base64.",
+			},
+		},
+		required: ["filename", "contentType"],
+	},
+	capabilities: ["write:media", "network:fetch"],
+	handler: async (args, ctx) => {
+		const media = ctx.media as
+			| {
+					upload?: (
+						filename: string,
+						contentType: string,
+						bytes: ArrayBuffer,
+					) => Promise<{ mediaId: string; url: string }>;
+			  }
+			| undefined;
+		if (!media?.upload) throw new Error("write:media capability missing");
+		const filename = asString(args.filename);
+		const contentType = asString(args.contentType);
+		let bytes: ArrayBuffer;
+		if (args.source_url) {
+			if (!ctx.http) throw new Error("network:fetch capability missing");
+			const res = await ctx.http.fetch(asString(args.source_url));
+			if (!res.ok) throw new Error(`Source URL returned ${res.status}`);
+			bytes = await res.arrayBuffer();
+		} else if (args.bytes_base64) {
+			const b64 = asString(args.bytes_base64);
+			const bin = typeof Buffer !== "undefined" ? Buffer.from(b64, "base64") : null;
+			if (!bin) throw new Error("base64 decode requires Node Buffer");
+			bytes = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) as ArrayBuffer;
+		} else {
+			throw new Error("Either source_url or bytes_base64 is required");
+		}
+		return await media.upload(filename, contentType, bytes);
+	},
+};
+
+const mediaDelete: Tool = {
+	name: "media_delete",
+	description: "Delete a media item. Always requires plan-mode approval.",
+	parameters: {
+		type: "object",
+		properties: { id: { type: "string" } },
+		required: ["id"],
+	},
+	capabilities: ["write:media"],
+	handler: async (args, _ctx) => {
+		const id = asString(args.id);
+		return {
+			ok: false,
+			paused_for_human: {
+				kind: "tool-approval",
+				tool: "media_delete",
+				args: { id },
+				reason: "Deleting media requires human approval.",
+			},
+		};
+	},
+};
+
+// =====================================================================
+// Web tools (M2)
+// =====================================================================
+
+const webFetch: Tool = {
+	name: "web_fetch",
+	description:
+		"Fetch a URL and return its text body. Subject to the agent's plugin host allowlist + SSRF protection. Use sparingly — long pages flood context.",
+	parameters: {
+		type: "object",
+		properties: {
+			url: { type: "string" },
+			max_chars: {
+				type: "number",
+				description: "Truncate the body to this many characters. Default 10000.",
+			},
+		},
+		required: ["url"],
+	},
+	capabilities: ["network:fetch"],
+	handler: async (args, ctx) => {
+		if (!ctx.http) throw new Error("network:fetch capability missing");
+		const url = asString(args.url);
+		const maxChars = asNumber(args.max_chars, 10000) ?? 10000;
+		const res = await ctx.http.fetch(url);
+		if (!res.ok) {
+			return { ok: false, status: res.status, error: `HTTP ${res.status}` };
+		}
+		const text = await res.text();
+		return {
+			ok: true,
+			url,
+			status: res.status,
+			content_type: res.headers.get("content-type") ?? "",
+			body: text.slice(0, maxChars),
+			truncated: text.length > maxChars,
+			length: text.length,
+		};
+	},
+};
+
+// =====================================================================
+// Pure scoring tools — no capabilities, no I/O (M2)
+// =====================================================================
+
+/**
+ * Strip HTML tags and extract plain text. Conservative — keeps the
+ * inner content, drops all attributes and tag wrappers.
+ */
+function htmlToText(html: string): string {
+	return html
+		.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+		.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+		.replace(/<[^>]+>/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+/**
+ * Count syllables in a word. Heuristic — used for Flesch-Kincaid.
+ * Not perfect, but good enough for relative scoring.
+ */
+function countSyllables(word: string): number {
+	const w = word.toLowerCase().replace(/[^a-z]/g, "");
+	if (w.length <= 3) return 1;
+	const matches = w
+		.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "")
+		.replace(/^y/, "")
+		.match(/[aeiouy]{1,2}/g);
+	return Math.max(1, matches?.length ?? 1);
+}
+
+const readabilityScore: Tool = {
+	name: "readability_score",
+	description:
+		"Compute Flesch-Kincaid readability score and reading time for a piece of content. Higher Flesch = easier to read; 60-70 is standard for blog content.",
+	parameters: {
+		type: "object",
+		properties: {
+			text: {
+				type: "string",
+				description: "Plain text or HTML. HTML tags are stripped before scoring.",
+			},
+		},
+		required: ["text"],
+	},
+	handler: async (args) => {
+		const raw = asString(args.text);
+		const text = raw.includes("<") ? htmlToText(raw) : raw;
+		const sentences = (text.match(/[^.!?]+[.!?]+/g) ?? [text]).filter((s) => s.trim());
+		const words = text.split(/\s+/).filter(Boolean);
+		const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
+		const numWords = Math.max(words.length, 1);
+		const numSentences = Math.max(sentences.length, 1);
+		// Flesch reading ease: 206.835 - 1.015 (W/S) - 84.6 (Sy/W)
+		const flesch = 206.835 - 1.015 * (numWords / numSentences) - 84.6 * (syllables / numWords);
+		// Reading time at 220 wpm.
+		const readingMinutes = numWords / 220;
+		return {
+			words: numWords,
+			sentences: numSentences,
+			syllables,
+			flesch_reading_ease: Math.max(0, Math.round(flesch * 10) / 10),
+			reading_minutes: Math.round(readingMinutes * 10) / 10,
+		};
+	},
+};
+
+const seoScore: Tool = {
+	name: "seo_score",
+	description:
+		"Score a content item against basic SEO heuristics. Returns a 0-100 score plus a list of findings (warn/fail).",
+	parameters: {
+		type: "object",
+		properties: {
+			title: { type: "string" },
+			description: { type: "string", description: "Meta description" },
+			body: { type: "string", description: "Full body — plain text or HTML" },
+			slug: { type: "string" },
+		},
+		required: ["title", "body"],
+	},
+	handler: async (args) => {
+		const title = asString(args.title);
+		const description = asString(args.description);
+		const slug = asString(args.slug);
+		const body = asString(args.body);
+		const text = body.includes("<") ? htmlToText(body) : body;
+		const findings: Array<{ severity: "pass" | "warn" | "fail"; message: string }> = [];
+		let score = 100;
+
+		if (!title) {
+			findings.push({ severity: "fail", message: "Missing title" });
+			score -= 30;
+		} else if (title.length < 30 || title.length > 70) {
+			findings.push({
+				severity: "warn",
+				message: `Title length ${title.length} chars (recommended 30-70)`,
+			});
+			score -= 5;
+		}
+
+		if (!description) {
+			findings.push({ severity: "warn", message: "Missing meta description" });
+			score -= 10;
+		} else if (description.length < 70 || description.length > 160) {
+			findings.push({
+				severity: "warn",
+				message: `Description length ${description.length} chars (recommended 70-160)`,
+			});
+			score -= 3;
+		}
+
+		if (!slug) {
+			findings.push({ severity: "warn", message: "Missing slug" });
+			score -= 5;
+		} else if (slug.length > 75) {
+			findings.push({ severity: "warn", message: "Slug exceeds 75 chars" });
+			score -= 3;
+		}
+
+		const wordCount = text.split(/\s+/).filter(Boolean).length;
+		if (wordCount < 200) {
+			findings.push({ severity: "warn", message: `Body is short (${wordCount} words)` });
+			score -= 10;
+		}
+
+		// h1 check (only meaningful for HTML input)
+		if (body.includes("<")) {
+			const h1Count = (body.match(/<h1\b/gi) ?? []).length;
+			if (h1Count === 0) findings.push({ severity: "warn", message: "No <h1> in body" });
+			if (h1Count > 1) findings.push({ severity: "warn", message: `Multiple <h1> (${h1Count})` });
+		}
+
+		return { score: Math.max(0, score), findings };
+	},
+};
+
 const BUILT_IN_TOOLS = [
 	contentList,
 	contentGet,
 	contentSearch,
+	contentCreate,
+	contentUpdate,
+	contentPublish,
+	contentSchedule,
+	contentDelete,
+	mediaUpload,
+	mediaDelete,
+	webFetch,
+	readabilityScore,
+	seoScore,
 	taskCreate,
 	taskAdvance,
 	memorySearch,
