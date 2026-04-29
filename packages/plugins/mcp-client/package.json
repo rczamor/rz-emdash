@@ -1,0 +1,29 @@
+{
+	"name": "@emdash-cms/plugin-mcp-client",
+	"private": true,
+	"version": "0.0.1",
+	"description": "MCP client for EmDash. Lets operators register external MCP servers (GitHub, Notion, Slack, custom) and auto-exposes their tools to agents through the Tools registry.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./client": "./src/client.ts"
+	},
+	"files": ["src"],
+	"keywords": ["emdash", "cms", "plugin", "mcp", "model-context-protocol"],
+	"license": "MIT",
+	"scripts": {
+		"test": "vitest run"
+	},
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {
+		"@emdash-cms/plugin-tools": "workspace:*"
+	},
+	"devDependencies": {
+		"vitest": "catalog:"
+	},
+	"optionalDependencies": {}
+}
