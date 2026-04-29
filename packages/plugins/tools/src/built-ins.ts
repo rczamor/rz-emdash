@@ -718,7 +718,64 @@ const seoScore: Tool = {
 	},
 };
 
+// =====================================================================
+// Orchestration tools (M7)
+// =====================================================================
+
+const agentDispatch: Tool = {
+	name: "agent_dispatch",
+	description:
+		"Spawn a sub-run on another agent. Returns immediately with the new run_id; the parent run pauses awaiting the sub-run's completion. The sub-run inherits parent_run_id; cost rolls up. Maximum nesting depth is 6.",
+	parameters: {
+		type: "object",
+		properties: {
+			agent_id: { type: "string", description: "ID of the agent to dispatch to" },
+			prompt: { type: "string", description: "Goal for the sub-agent (used as initial user message)" },
+			max_iterations: { type: "number" },
+			max_usd: { type: "number" },
+		},
+		required: ["agent_id", "prompt"],
+	},
+	capabilities: ["network:fetch"],
+	handler: async (args, ctx) => {
+		if (!ctx.http) throw new Error("network:fetch capability missing");
+		const baseUrl = (
+			(ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321"
+		).replace(/\/$/, "");
+		const res = await ctx.http.fetch(`${baseUrl}/_emdash/api/plugins/runs/runs.start`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				agent_id: asString(args.agent_id),
+				prompt: asString(args.prompt),
+				parent_run_id: ctx.runId,
+				max_iterations: asNumber(args.max_iterations),
+				max_usd: asNumber(args.max_usd),
+			}),
+		});
+		if (!res.ok) throw new Error(`runs.start returned ${res.status}`);
+		const json = (await res.json()) as {
+			data?: { ok?: boolean; run?: { id: string }; error?: string };
+		};
+		const data = json.data;
+		if (!data || data.ok === false) {
+			throw new Error(data?.error ?? "runs.start returned ok:false");
+		}
+		const subRunId = data.run?.id;
+		if (!subRunId) throw new Error("runs.start did not return a run id");
+		// Tell the harness to pause awaiting this sub-run. The parent
+		// resumes when the child emits run:completed (M7's
+		// auto-routine subscribes and calls runs.resume).
+		return {
+			ok: true,
+			paused_for_subrun: { run_id: subRunId },
+			message: `Dispatched agent ${asString(args.agent_id)} as sub-run ${subRunId}`,
+		};
+	},
+};
+
 const BUILT_IN_TOOLS = [
+	agentDispatch,
 	contentList,
 	contentGet,
 	contentSearch,

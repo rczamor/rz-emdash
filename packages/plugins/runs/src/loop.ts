@@ -158,7 +158,8 @@ type ToolPause = { kind: string; tool: string; args?: Record<string, unknown>; r
 type InvokeOutcome =
 	| { kind: "ok"; tool_call_id: string; content: string; output: unknown }
 	| { kind: "error"; tool_call_id: string; content: string; error: string }
-	| { kind: "paused"; tool_call_id: string; pause: ToolPause };
+	| { kind: "paused"; tool_call_id: string; pause: ToolPause }
+	| { kind: "subrun"; tool_call_id: string; sub_run_id: string };
 
 async function invokeTool(
 	toolCall: ChatToolCall,
@@ -219,14 +220,43 @@ async function invokeTool(
 					output?: unknown;
 					error?: string;
 					paused_for_human?: ToolPause;
+					paused_for_subrun?: { run_id: string };
 				};
 			};
 			const data = json.data ?? {};
 			if (data.paused_for_human) {
 				pause = data.paused_for_human;
+			} else if ((data as { paused_for_subrun?: { run_id: string } }).paused_for_subrun?.run_id) {
+				const subRunId = (data as { paused_for_subrun: { run_id: string } }).paused_for_subrun.run_id;
+				const durationMs = Date.now() - start;
+				await persistToolCallEvent(ctx, run, toolCall, {
+					output: { sub_run_id: subRunId },
+					duration_ms: durationMs,
+				});
+				return { kind: "subrun", tool_call_id: toolCall.id, sub_run_id: subRunId };
 			} else if (data.ok === false) {
 				error = data.error ?? "Tool returned ok:false";
 			} else {
+				// agent_dispatch returns { ok: true, paused_for_subrun, ... }
+				// in the tool body — runs.invoke wraps in `data.output` after
+				// the tool's own ok-shape resolution, so paused_for_subrun
+				// might also surface inside output. Detect that path too.
+				if (
+					typeof data.output === "object" &&
+					data.output !== null &&
+					"paused_for_subrun" in data.output
+				) {
+					const sub = (data.output as { paused_for_subrun: { run_id?: string } })
+						.paused_for_subrun;
+					if (sub?.run_id) {
+						const durationMs = Date.now() - start;
+						await persistToolCallEvent(ctx, run, toolCall, {
+							output: { sub_run_id: sub.run_id },
+							duration_ms: durationMs,
+						});
+						return { kind: "subrun", tool_call_id: toolCall.id, sub_run_id: sub.run_id };
+					}
+				}
 				output = data.output;
 			}
 		}
@@ -475,6 +505,29 @@ export async function tickRun(
 				kind: "tool-approval",
 				tool: result.pause.tool,
 				reason: result.pause.reason,
+			}, ordinal);
+			return { done: false, scheduleNextTick: false, run };
+		}
+		if (result.kind === "subrun") {
+			// M7 — parent pauses awaiting the sub-run. The auto-routine
+			// `run:completed → resume parent` lands in M7's auto-routines
+			// scaffolding; until that ships, an operator can resume
+			// manually with the sub-run's final output.
+			run.status = "paused";
+			run.paused_for_human = {
+				kind: "awaiting-subrun",
+				payload: {
+					tool_call: tc as unknown as Record<string, unknown>,
+					sub_run_id: result.sub_run_id,
+				},
+				created_at: NOW(),
+			};
+			run.updated_at = NOW();
+			await storage.runs.put(run.id, run);
+			const ordinal = await nextOrdinal(ctx, run);
+			await appendEvent(ctx, run, "human-pause", {
+				kind: "awaiting-subrun",
+				sub_run_id: result.sub_run_id,
 			}, ordinal);
 			return { done: false, scheduleNextTick: false, run };
 		}
