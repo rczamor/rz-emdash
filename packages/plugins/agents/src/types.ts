@@ -52,6 +52,15 @@ export interface Agent {
 	/** Collection that holds agent skills. Defaults to "agent_skills". */
 	skills_collection?: string;
 
+	/**
+	 * If true, every skill body is concatenated into the system prompt at
+	 * compile time (legacy behavior). If false (default after M8), only a
+	 * skill index is inlined and the agent loads bodies on demand via the
+	 * `skill_load` tool. Use when skills are short or the agent has fewer
+	 * than ~10 of them.
+	 */
+	bulk_load_skills?: boolean;
+
 	quotas?: AgentQuotas;
 
 	created_at: string;
@@ -128,6 +137,14 @@ export interface MemorySearchInput {
  */
 export interface CompiledAgentContext {
 	agent: Agent;
-	skills: Array<{ slug: string; name: string; body: string }>;
+	/**
+	 * Skill records. When `agent.bulk_load_skills === true`, this array
+	 * contains full bodies. Otherwise it contains only summaries (first
+	 * paragraph) and the agent uses `skill_load` to fetch bodies on
+	 * demand. The shape is the same either way; consumers can detect
+	 * progressive-disclosure mode by `body.length` vs `summary.length`
+	 * or by reading `agent.bulk_load_skills`.
+	 */
+	skills: Array<{ slug: string; name: string; body: string; summary?: string }>;
 	memories: MemoryEntry[];
 }

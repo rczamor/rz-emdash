@@ -130,13 +130,28 @@ async function updateAgent(input: UpdateAgentInput, ctx: PluginContext): Promise
 
 // ── Skill resolution ────────────────────────────────────────────────────────
 
+/**
+ * First-paragraph summary extractor. Used in progressive-disclosure
+ * mode so the system prompt carries an index of skill titles +
+ * summaries instead of full bodies. The agent calls `skill_load` to
+ * fetch the full body on demand.
+ */
+function firstParagraph(body: string): string {
+	const trimmed = body.trim();
+	if (!trimmed) return "";
+	const para = trimmed.split(/\n\s*\n/)[0] ?? trimmed;
+	// Cap at ~280 chars so even a long first paragraph doesn't blow context.
+	return para.length > 280 ? para.slice(0, 277).trimEnd() + "…" : para;
+}
+
 async function resolveSkills(
 	agent: Agent,
 	ctx: PluginContext,
-): Promise<Array<{ slug: string; name: string; body: string }>> {
+): Promise<Array<{ slug: string; name: string; body: string; summary?: string }>> {
 	if (!ctx.content || agent.skills.length === 0) return [];
 	const collection = agent.skills_collection ?? "agent_skills";
-	const out: Array<{ slug: string; name: string; body: string }> = [];
+	const bulk = agent.bulk_load_skills === true;
+	const out: Array<{ slug: string; name: string; body: string; summary?: string }> = [];
 	for (const slug of agent.skills) {
 		try {
 			const item = await ctx.content.get(collection, slug);
@@ -144,7 +159,12 @@ async function resolveSkills(
 			const data = item as unknown as Record<string, unknown>;
 			const name = scalarString(data.title ?? data.name, slug);
 			const body = scalarString(data.body ?? data.content);
-			out.push({ slug, name, body });
+			if (bulk) {
+				out.push({ slug, name, body });
+			} else {
+				// Progressive disclosure: keep an index entry only.
+				out.push({ slug, name, body: "", summary: firstParagraph(body) });
+			}
 		} catch (err) {
 			ctx.log.warn("Agents: skill resolution failed", {
 				agentId: agent.id,
@@ -323,6 +343,37 @@ export default definePlugin({
 				const context = await compileContext(id, memoryLimit, ctx);
 				if (!context) return { ok: false, error: "Not found" };
 				return { ok: true, context };
+			},
+		},
+
+		// M8 — fetch a single skill body on demand. Backs the `skill_load`
+		// tool so agents in progressive-disclosure mode (the default) can
+		// pull the body of a specific skill into context only when needed.
+		"agents.skill.get": {
+			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
+				const agent_id = getQueryParam(routeCtx, "agent_id");
+				const slug = getQueryParam(routeCtx, "slug");
+				if (!isValidAgentId(agent_id) || !slug) {
+					return { ok: false, error: "agent_id and slug required" };
+				}
+				const agent = await loadAgent(agent_id, ctx);
+				if (!agent) return { ok: false, error: "Agent not found" };
+				if (!agent.skills.includes(slug)) {
+					return { ok: false, error: `Skill '${slug}' not in agent's allowlist` };
+				}
+				if (!ctx.content) return { ok: false, error: "read:content capability missing" };
+				const collection = agent.skills_collection ?? "agent_skills";
+				const item = await ctx.content.get(collection, slug);
+				if (!item) return { ok: false, error: "Skill not found" };
+				const data = item as unknown as Record<string, unknown>;
+				return {
+					ok: true,
+					skill: {
+						slug,
+						name: scalarString(data.title ?? data.name, slug),
+						body: scalarString(data.body ?? data.content),
+					},
+				};
 			},
 		},
 

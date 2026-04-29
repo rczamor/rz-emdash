@@ -719,6 +719,81 @@ const seoScore: Tool = {
 };
 
 // =====================================================================
+// Skills tools (M8 — progressive disclosure)
+// =====================================================================
+
+const skillList: Tool = {
+	name: "skill_list",
+	description:
+		"Return the index of skills available to the calling agent (slug, name, summary). Use this to decide which skills to load via skill_load. Skills are loaded on demand to keep the system prompt small.",
+	parameters: {
+		type: "object",
+		properties: {
+			agent_id: { type: "string", description: "Agent whose skills to list" },
+		},
+		required: ["agent_id"],
+	},
+	capabilities: ["network:fetch"],
+	handler: async (args, ctx) => {
+		if (!ctx.http) throw new Error("network:fetch capability missing");
+		const baseUrl = (
+			(ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321"
+		).replace(/\/$/, "");
+		const res = await ctx.http.fetch(
+			`${baseUrl}/_emdash/api/plugins/agents/agents.compile?id=${encodeURIComponent(asString(args.agent_id))}`,
+		);
+		if (!res.ok) throw new Error(`agents.compile returned ${res.status}`);
+		const json = (await res.json()) as {
+			data?: {
+				ok?: boolean;
+				context?: { skills?: Array<{ slug: string; name: string; summary?: string; body?: string }> };
+			};
+		};
+		const skills = json.data?.context?.skills ?? [];
+		return {
+			skills: skills.map((s) => ({
+				slug: s.slug,
+				name: s.name,
+				summary: s.summary ?? (s.body ? s.body.slice(0, 280) : ""),
+			})),
+		};
+	},
+};
+
+const skillLoad: Tool = {
+	name: "skill_load",
+	description:
+		"Fetch the full body of a specific skill by slug. The agent's allowlist is enforced — only skills declared in the agent's `skills` array can be loaded. Use this after skill_list to decide which skill is relevant.",
+	parameters: {
+		type: "object",
+		properties: {
+			agent_id: { type: "string" },
+			slug: { type: "string", description: "Skill slug (e.g. 'editorial-voice')" },
+		},
+		required: ["agent_id", "slug"],
+	},
+	capabilities: ["network:fetch"],
+	handler: async (args, ctx) => {
+		if (!ctx.http) throw new Error("network:fetch capability missing");
+		const baseUrl = (
+			(ctx.site as { url?: string } | undefined)?.url ?? "http://localhost:4321"
+		).replace(/\/$/, "");
+		const res = await ctx.http.fetch(
+			`${baseUrl}/_emdash/api/plugins/agents/agents.skill.get?agent_id=${encodeURIComponent(asString(args.agent_id))}&slug=${encodeURIComponent(asString(args.slug))}`,
+		);
+		if (!res.ok) throw new Error(`agents.skill.get returned ${res.status}`);
+		const json = (await res.json()) as {
+			data?: { ok?: boolean; skill?: { slug: string; name: string; body: string }; error?: string };
+		};
+		const data = json.data;
+		if (!data || data.ok === false) {
+			return { ok: false, error: data?.error ?? "Skill load failed" };
+		}
+		return data.skill;
+	},
+};
+
+// =====================================================================
 // Orchestration tools (M7)
 // =====================================================================
 
@@ -775,6 +850,8 @@ const agentDispatch: Tool = {
 };
 
 const BUILT_IN_TOOLS = [
+	skillList,
+	skillLoad,
 	agentDispatch,
 	contentList,
 	contentGet,
