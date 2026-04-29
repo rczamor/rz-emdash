@@ -36,6 +36,29 @@ export type {
 } from "./types.js";
 
 /**
+ * Validation gates registry (M9).
+ *
+ * Plugins register validators (brand check, moderation, SEO score)
+ * via `registerValidator`. The runs harness calls `runValidators`
+ * before staging a publish so hard fails (moderation flag, etc.)
+ * block the operation and surface a structured report to the
+ * approver. Warnings are advisory.
+ */
+export {
+	listValidators,
+	registerValidator,
+	runValidators,
+	unregisterValidator,
+} from "./validators.js";
+export type {
+	ValidationFinding,
+	ValidationReport,
+	Validator,
+	ValidatorContext,
+	ValidatorSeverity,
+} from "./validators.js";
+
+/**
  * SSE streaming primitive for run events.
  *
  * `streamRunEvents(runId, since_ordinal, ctx)` returns a Web Response

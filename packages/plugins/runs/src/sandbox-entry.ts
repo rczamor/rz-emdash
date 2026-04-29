@@ -21,9 +21,14 @@ import { resolveActiveDriver } from "@emdash-cms/plugin-llm-router";
 import type { ChatMessage, Driver, ToolSpec } from "@emdash-cms/plugin-llm-router";
 import { registerJobHandler } from "@emdash-cms/plugin-scheduler/registry";
 
+import { registerDefaultValidators } from "./default-validators.js";
 import { tickRun } from "./loop.js";
 import type { Run, RunEvent, StartRunInput } from "./types.js";
 import { aggregateUsage, type UsageGroup, type UsagePeriod } from "./usage-summary.js";
+import { runValidators } from "./validators.js";
+
+// Register built-in validators (currently: seo). Idempotent.
+registerDefaultValidators();
 
 const NOW = (): string => new Date().toISOString();
 const TRAILING_SLASH_RE = /\/$/;
@@ -515,6 +520,28 @@ export default definePlugin({
 				await ctx.storage.runs!.put(run.id, run);
 				await scheduleNextTick(run.id, ctx);
 				return { ok: true, run };
+			},
+		},
+
+		// M9 — pre-publish validation. Anyone with a content draft can
+		// call this to get the structured ValidationReport before
+		// staging a publish. The runs harness can also call it
+		// internally before pausing for approval (a future tightening).
+		"runs.validate": {
+			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
+				const body = routeCtx.input as
+					| { collection?: string; id?: string | null; data?: Record<string, unknown> }
+					| null;
+				if (!body || typeof body !== "object" || !body.collection || !body.data) {
+					return { ok: false, error: "collection and data required" };
+				}
+				const report = await runValidators({
+					collection: body.collection,
+					id: body.id ?? null,
+					data: body.data,
+					plugin: ctx,
+				});
+				return { ok: report.ok, report };
 			},
 		},
 
