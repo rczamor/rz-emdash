@@ -1,0 +1,30 @@
+{
+	"name": "@emdash-cms/plugin-runs",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Agent-run harness for EmDash. Persists long-running agent executions as first-class entities with checkpointed iteration, cancellation, resume, and per-run cost ceilings. The substrate for plan mode, streaming supervision, and sub-runs.",
+	"type": "module",
+	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./sandbox": "./src/sandbox-entry.ts",
+		"./types": "./src/types.ts"
+	},
+	"files": ["src"],
+	"keywords": ["emdash", "cms", "plugin", "agents", "harness", "runs"],
+	"license": "MIT",
+	"scripts": {
+		"test": "vitest run"
+	},
+	"peerDependencies": {
+		"emdash": "workspace:>=0.7.0"
+	},
+	"dependencies": {
+		"@emdash-cms/plugin-llm-router": "workspace:*",
+		"@emdash-cms/plugin-scheduler": "workspace:*"
+	},
+	"devDependencies": {
+		"vitest": "catalog:"
+	},
+	"optionalDependencies": {}
+}

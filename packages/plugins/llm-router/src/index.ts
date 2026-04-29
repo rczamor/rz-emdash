@@ -28,6 +28,7 @@ export type {
 	ChatCompletionInput,
 	ChatCompletionResponse,
 	ChatMessage,
+	ChatToolCall,
 	EmbeddingsInput,
 	EmbeddingsResponse,
 	ModelInfo,

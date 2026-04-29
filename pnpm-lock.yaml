@@ -1523,6 +1523,22 @@ importers:
         specifier: workspace:>=0.7.0
         version: link:../../core
 
+  packages/plugins/runs:
+    dependencies:
+      '@emdash-cms/plugin-llm-router':
+        specifier: workspace:*
+        version: link:../llm-router
+      '@emdash-cms/plugin-scheduler':
+        specifier: workspace:*
+        version: link:../scheduler
+      emdash:
+        specifier: workspace:>=0.7.0
+        version: link:../../core
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.18(@types/node@24.10.13)(@vitest/browser-playwright@4.0.18)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
+
   packages/plugins/sandboxed-test:
     dependencies:
       emdash:

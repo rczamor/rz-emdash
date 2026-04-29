@@ -5,6 +5,14 @@
  * the resolved DriverHandlers and uses them for the chatCompletion
  * call. Everything else — tool execution, cost recording, llm:*
  * event dispatch — is identical across drivers.
+ *
+ * **Legacy path**: this is the synchronous in-memory loop. The
+ * harness equivalent lives in `@emdash-cms/plugin-runs` (see
+ * `packages/plugins/runs/src/loop.ts`) and provides persisted,
+ * resumable, cancellable runs. New code should prefer
+ * `runs.start` over `llm-router/chat`. This module survives until
+ * the agent-aware features it owns (compile, quota, tool spec) are
+ * migrated into the runs loop in milestone M3 (plan mode).
  */
 
 import { dispatchEvent } from "@emdash-cms/plugin-automations/dispatch";
