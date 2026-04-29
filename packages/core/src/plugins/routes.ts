@@ -95,8 +95,15 @@ export class PluginRouteHandler {
 			validatedInput = options.body;
 		}
 
-		// Create route context
-		const baseContext = this.contextFactory.createContext(this.plugin);
+		// Create route context. Run/trace IDs are propagated from the
+		// inbound request headers (set by the runs harness on internal
+		// RPC) so handlers and downstream tools.invoke calls can stamp
+		// the same run.
+		const runMeta = {
+			runId: options.request.headers.get("X-EmDash-Run-Id") ?? undefined,
+			traceId: options.request.headers.get("X-EmDash-Trace-Id") ?? undefined,
+		};
+		const baseContext = this.contextFactory.createContext(this.plugin, runMeta);
 		const routeContext: RouteContext = {
 			...baseContext,
 			input: validatedInput,

@@ -162,6 +162,48 @@ describe("createHttpAccess credential stripping", () => {
 		expect(h.get("x-emdash-internal-plugin-from")).toBeNull();
 		expect(h.get("x-emdash-request")).toBeNull();
 	});
+
+	it("forwards X-EmDash-Run-Id and X-EmDash-Trace-Id on internal plugin RPC", async () => {
+		mockFetch.mockResolvedValueOnce(okResponse());
+
+		const http = createHttpAccess("tools", [], "https://cms.example.test", {
+			runId: "run_abc",
+			traceId: "trace_xyz",
+		});
+		await http.fetch("https://cms.example.test/_emdash/api/plugins/agents/agents.get");
+
+		const h = headersOfCall(0);
+		expect(h.get("x-emdash-run-id")).toBe("run_abc");
+		expect(h.get("x-emdash-trace-id")).toBe("trace_xyz");
+		expect(h.get("x-emdash-internal-plugin-from")).toBe("tools");
+	});
+
+	it("does not forward run/trace headers to external destinations", async () => {
+		mockFetch.mockResolvedValueOnce(okResponse());
+
+		const http = createHttpAccess("tools", ["api.example.com"], "https://cms.example.test", {
+			runId: "run_abc",
+			traceId: "trace_xyz",
+		});
+		await http.fetch("https://api.example.com/external");
+
+		const h = headersOfCall(0);
+		expect(h.get("x-emdash-run-id")).toBeNull();
+		expect(h.get("x-emdash-trace-id")).toBeNull();
+		expect(h.get("x-emdash-internal-plugin")).toBeNull();
+	});
+
+	it("omits run/trace headers when not provided", async () => {
+		mockFetch.mockResolvedValueOnce(okResponse());
+
+		const http = createHttpAccess("tools", [], "https://cms.example.test");
+		await http.fetch("https://cms.example.test/_emdash/api/plugins/agents/agents.get");
+
+		const h = headersOfCall(0);
+		expect(h.get("x-emdash-run-id")).toBeNull();
+		expect(h.get("x-emdash-trace-id")).toBeNull();
+		expect(h.get("x-emdash-internal-plugin-from")).toBe("tools");
+	});
 });
 
 // =============================================================================

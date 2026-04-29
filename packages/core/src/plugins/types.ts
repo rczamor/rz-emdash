@@ -432,6 +432,21 @@ export interface PluginContext<TStorage extends PluginStorageConfig = PluginStor
 
 	/** Email access - only if email:send capability and a provider is configured */
 	email?: EmailAccess;
+
+	/**
+	 * Agent run ID — populated when the request originated from an active
+	 * `@emdash-cms/plugin-runs` run. Forwarded through internal plugin
+	 * RPC via the `X-EmDash-Run-Id` header so downstream plugins can
+	 * stamp their own audit entries with the originating run.
+	 */
+	runId?: string;
+
+	/**
+	 * Distributed trace ID — populated when the request carries the
+	 * `X-EmDash-Trace-Id` header. Used by Langfuse and other tracers to
+	 * correlate spans across the plugin RPC graph.
+	 */
+	traceId?: string;
 }
 
 // =============================================================================

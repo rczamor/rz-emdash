@@ -515,6 +515,8 @@ export function createMediaAccessWithWrite(
 const MAX_PLUGIN_REDIRECTS = 5;
 const INTERNAL_PLUGIN_TOKEN_HEADER = "X-EmDash-Internal-Plugin";
 const INTERNAL_PLUGIN_FROM_HEADER = "X-EmDash-Internal-Plugin-From";
+const INTERNAL_RUN_ID_HEADER = "X-EmDash-Run-Id";
+const INTERNAL_TRACE_ID_HEADER = "X-EmDash-Trace-Id";
 const INTERNAL_PLUGIN_TOKEN_STATE = Symbol.for("emdash.internalPluginRequestToken");
 
 interface InternalPluginTokenState {
@@ -573,11 +575,17 @@ function normalizeOrigin(origin: string): string {
 	}
 }
 
-function withInternalPluginHeaders(pluginId: string, init?: RequestInit): RequestInit {
+function withInternalPluginHeaders(
+	pluginId: string,
+	init?: RequestInit,
+	runMeta?: { runId?: string; traceId?: string },
+): RequestInit {
 	const headers = new Headers(init?.headers);
 	headers.set(INTERNAL_PLUGIN_TOKEN_HEADER, getInternalPluginRequestToken());
 	headers.set(INTERNAL_PLUGIN_FROM_HEADER, pluginId);
 	headers.set("X-EmDash-Request", "1");
+	if (runMeta?.runId) headers.set(INTERNAL_RUN_ID_HEADER, runMeta.runId);
+	if (runMeta?.traceId) headers.set(INTERNAL_TRACE_ID_HEADER, runMeta.traceId);
 	return { ...init, headers };
 }
 
@@ -620,6 +628,7 @@ export function createHttpAccess(
 	pluginId: string,
 	allowedHosts: string[],
 	internalOrigin = "http://localhost:4321",
+	runMeta?: { runId?: string; traceId?: string },
 ): HttpAccess {
 	const normalizedInternalOrigin = normalizeOrigin(internalOrigin);
 	return {
@@ -665,7 +674,7 @@ export function createHttpAccess(
 
 				const response = await globalThis.fetch(currentUrl, {
 					...(isInternalPluginUrl && internalPluginAuthAllowed
-						? withInternalPluginHeaders(pluginId, currentInit)
+						? withInternalPluginHeaders(pluginId, currentInit, runMeta)
 						: currentInit),
 					redirect: "manual",
 				});
@@ -1000,9 +1009,18 @@ export class PluginContextFactory {
 	}
 
 	/**
-	 * Create the unified plugin context
+	 * Create the unified plugin context.
+	 *
+	 * `runMeta` carries the agent run / trace correlation IDs from the
+	 * inbound request. They are exposed as `ctx.runId` / `ctx.traceId`
+	 * and forwarded as `X-EmDash-Run-Id` / `X-EmDash-Trace-Id` headers
+	 * on internal plugin RPC, so downstream plugins (tools.invoke,
+	 * tasks.cost.record, langfuse) can stamp the same run.
 	 */
-	createContext(plugin: ResolvedPlugin): PluginContext {
+	createContext(
+		plugin: ResolvedPlugin,
+		runMeta?: { runId?: string; traceId?: string },
+	): PluginContext {
 		const capabilities = new Set(plugin.capabilities);
 
 		// Always available
@@ -1035,6 +1053,7 @@ export class PluginContextFactory {
 				plugin.id,
 				plugin.allowedHosts,
 				this.site.url || "http://localhost:4321",
+				runMeta,
 			);
 		}
 
@@ -1077,6 +1096,8 @@ export class PluginContextFactory {
 			users,
 			cron,
 			email,
+			runId: runMeta?.runId,
+			traceId: runMeta?.traceId,
 		};
 	}
 }
