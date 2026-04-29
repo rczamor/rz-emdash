@@ -247,6 +247,18 @@ const memoryPut: Tool = {
  * `awaiting_approval`. M3 wires the approval token check.
  */
 
+/**
+ * Approval-gate marker: callers (the runs harness) set `_force_execute: true`
+ * after a human approves the gated tool. M2 gated tools check this and skip
+ * the pause, executing for real. Anyone else calling the tool directly with
+ * this flag bypasses approval — by design; the flag is internal to the
+ * harness's approve/deny path. tools.invoke surfaces this only when the
+ * caller has already presented an approval token validated against the run.
+ */
+function isForcedExecute(args: Record<string, unknown>): boolean {
+	return args._force_execute === true;
+}
+
 const PAUSED_FOR_PUBLISH = (collection: string, id: string, data: Record<string, unknown>) => ({
 	ok: false as const,
 	paused_for_human: {
@@ -319,8 +331,10 @@ const contentUpdate: Tool = {
 		const data = (args.data ?? {}) as Record<string, unknown>;
 
 		// Approval gate: published items require approval; drafts pass.
+		// `_force_execute` is set by the runs harness on resume after a
+		// human approval — bypass the gate when present.
 		const existing = await content.get(collection, id);
-		if (existing?.status === "published") {
+		if (existing?.status === "published" && !isForcedExecute(args)) {
 			return {
 				ok: false,
 				paused_for_human: {
@@ -331,7 +345,10 @@ const contentUpdate: Tool = {
 				},
 			};
 		}
-		return await content.update(collection, id, data);
+		// Strip the harness flag before forwarding to the data layer.
+		const { _force_execute: _omitted, ...cleanData } = data;
+		void _omitted;
+		return await content.update(collection, id, cleanData);
 	},
 };
 
@@ -353,14 +370,21 @@ const contentPublish: Tool = {
 		required: ["collection", "id"],
 	},
 	capabilities: ["write:content"],
-	handler: async (args, _ctx) => {
+	handler: async (args, ctx) => {
 		const collection = asString(args.collection);
 		const id = asString(args.id);
 		const data = (args.data ?? {}) as Record<string, unknown>;
 		// Always pause for approval. M3's runs.resume verifies the
-		// approval token and re-invokes via the resume path; this tool
-		// is never executed without approval.
-		return PAUSED_FOR_PUBLISH(collection, id, { ...data, status: "published" });
+		// approval token and re-invokes the tool with _force_execute=true
+		// to bypass this check; the gate is enforced exactly once.
+		if (!isForcedExecute(args)) {
+			return PAUSED_FOR_PUBLISH(collection, id, { ...data, status: "published" });
+		}
+		const content = ctx.content as
+			| { update?: (c: string, id: string, d: Record<string, unknown>) => Promise<unknown> }
+			| undefined;
+		if (!content?.update) throw new Error("write:content capability missing");
+		return await content.update(collection, id, { ...data, status: "published" });
 	},
 };
 
@@ -408,18 +432,25 @@ const contentDelete: Tool = {
 		required: ["collection", "id"],
 	},
 	capabilities: ["write:content"],
-	handler: async (args, _ctx) => {
+	handler: async (args, ctx) => {
 		const collection = asString(args.collection);
 		const id = asString(args.id);
-		return {
-			ok: false,
-			paused_for_human: {
-				kind: "tool-approval",
-				tool: "content_delete",
-				args: { collection, id },
-				reason: "Deleting content requires human approval, even for drafts.",
-			},
-		};
+		if (!isForcedExecute(args)) {
+			return {
+				ok: false,
+				paused_for_human: {
+					kind: "tool-approval",
+					tool: "content_delete",
+					args: { collection, id },
+					reason: "Deleting content requires human approval, even for drafts.",
+				},
+			};
+		}
+		const content = ctx.content as
+			| { delete?: (c: string, id: string) => Promise<boolean> }
+			| undefined;
+		if (!content?.delete) throw new Error("write:content capability missing");
+		return await content.delete(collection, id);
 	},
 };
 
@@ -488,17 +519,24 @@ const mediaDelete: Tool = {
 		required: ["id"],
 	},
 	capabilities: ["write:media"],
-	handler: async (args, _ctx) => {
+	handler: async (args, ctx) => {
 		const id = asString(args.id);
-		return {
-			ok: false,
-			paused_for_human: {
-				kind: "tool-approval",
-				tool: "media_delete",
-				args: { id },
-				reason: "Deleting media requires human approval.",
-			},
-		};
+		if (!isForcedExecute(args)) {
+			return {
+				ok: false,
+				paused_for_human: {
+					kind: "tool-approval",
+					tool: "media_delete",
+					args: { id },
+					reason: "Deleting media requires human approval.",
+				},
+			};
+		}
+		const media = ctx.media as
+			| { delete?: (id: string) => Promise<boolean> }
+			| undefined;
+		if (!media?.delete) throw new Error("write:media capability missing");
+		return await media.delete(id);
 	},
 };
 

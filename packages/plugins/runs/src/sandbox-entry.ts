@@ -108,6 +108,92 @@ async function tickAndMaybeReschedule(runId: string, ctx: PluginContext): Promis
 	}
 }
 
+/**
+ * Re-invoke a previously gated tool call with `_force_execute: true`.
+ * Used by `runs.approve` after a human approves a tool-approval pause:
+ * the tool's own gate sees the flag and skips its pause envelope, so
+ * the actual operation runs and we get a real result to append to the
+ * run's message history.
+ */
+async function invokeForcedTool(
+	toolCall: { id: string; function: { name: string; arguments: string } },
+	run: Run,
+	site: string,
+	ctx: PluginContext,
+): Promise<{ content: string; ok: boolean }> {
+	if (!ctx.http) {
+		return { content: JSON.stringify({ ok: false, error: "network:fetch missing" }), ok: false };
+	}
+	let parsed: Record<string, unknown> = {};
+	try {
+		parsed = JSON.parse(toolCall.function.arguments || "{}") as Record<string, unknown>;
+	} catch {
+		// fall through with parsed = {}
+	}
+	try {
+		const res = await ctx.http.fetch(`${site}/_emdash/api/plugins/tools/tools.invoke`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: toolCall.function.name,
+				arguments: { ...parsed, _force_execute: true },
+				taskId: run.task_id,
+				agentId: run.agent_id,
+			}),
+		});
+		if (!res.ok) {
+			return {
+				content: JSON.stringify({ ok: false, error: `tools.invoke ${res.status}` }),
+				ok: false,
+			};
+		}
+		const json = (await res.json()) as {
+			data?: { ok?: boolean; output?: unknown; error?: string };
+		};
+		const data = json.data ?? {};
+		if (data.ok === false) {
+			return { content: JSON.stringify({ ok: false, error: data.error }), ok: false };
+		}
+		return { content: JSON.stringify(data.output ?? null), ok: true };
+	} catch (err) {
+		const error = err instanceof Error ? err.message : String(err);
+		return { content: JSON.stringify({ ok: false, error }), ok: false };
+	}
+}
+
+async function appendApprovalEvent(
+	ctx: PluginContext,
+	run: Run,
+	decision: "approve" | "deny",
+	payload: Record<string, unknown>,
+): Promise<void> {
+	const events = (ctx.storage as unknown as {
+		run_events: {
+			query: (opts: {
+				where?: Record<string, unknown>;
+				orderBy?: Record<string, "asc" | "desc">;
+				limit?: number;
+			}) => Promise<{ items: Array<{ data: RunEvent }> }>;
+			put: (id: string, data: RunEvent) => Promise<void>;
+		};
+	}).run_events;
+	const result = await events.query({
+		where: { run_id: run.id },
+		orderBy: { ordinal: "desc" },
+		limit: 1,
+	});
+	const ordinal = (result.items[0]?.data.ordinal ?? -1) + 1;
+	const event: RunEvent = {
+		id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+		run_id: run.id,
+		ordinal,
+		kind: "human-resume",
+		payload: { decision, ...payload },
+		created_at: NOW(),
+	};
+	await events.put(event.id, event);
+}
+
 async function eventsSince(
 	ctx: PluginContext,
 	runId: string,
@@ -320,6 +406,113 @@ export default definePlugin({
 				if (!body?.id) return { ok: false, error: "id required" };
 				await tickAndMaybeReschedule(body.id, ctx);
 				const run = (await ctx.storage.runs!.get(body.id)) as Run | null;
+				return { ok: true, run };
+			},
+		},
+
+		// =====================================================================
+		// M3 — plan/tool approval routes
+		// =====================================================================
+
+		"runs.approve": {
+			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
+				const body = routeCtx.input as { id?: string; approval_token?: string } | null;
+				if (!body?.id) return { ok: false, error: "id required" };
+				const run = (await ctx.storage.runs!.get(body.id)) as Run | null;
+				if (!run) return { ok: false, error: "Not found" };
+				if (run.status !== "awaiting_approval") {
+					return { ok: false, error: `Run not awaiting approval (status: ${run.status})` };
+				}
+				if (run.approval_token && body.approval_token && body.approval_token !== run.approval_token) {
+					return { ok: false, error: "Invalid approval token" };
+				}
+
+				const pause = run.paused_for_human;
+				if (!pause) {
+					return { ok: false, error: "Run has no pending pause envelope" };
+				}
+
+				if (pause.kind === "tool-approval") {
+					// Re-invoke the deferred tool with _force_execute to bypass
+					// the tool's own gate. Append the real result to history.
+					const toolCall = pause.payload.tool_call as
+						| { id: string; type: "function"; function: { name: string; arguments: string } }
+						| undefined;
+					if (!toolCall) {
+						return { ok: false, error: "Pause payload missing tool_call" };
+					}
+					const result = await invokeForcedTool(toolCall, run, siteUrl(ctx), ctx);
+					run.message_history = [
+						...run.message_history,
+						{ role: "tool", tool_call_id: toolCall.id, content: result.content },
+					];
+					await appendApprovalEvent(ctx, run, "approve", { tool: toolCall.function.name });
+				} else if (pause.kind === "plan-review") {
+					// Plan stays in message_history; we add a synthetic user
+					// message confirming approval so the model knows to proceed.
+					run.message_history = [
+						...run.message_history,
+						{ role: "user", content: "Plan approved. Proceed with execution." },
+					];
+					await appendApprovalEvent(ctx, run, "approve", { kind: "plan-review" });
+				}
+
+				run.status = "queued";
+				run.paused_for_human = undefined;
+				run.approval_token = undefined;
+				run.updated_at = NOW();
+				await ctx.storage.runs!.put(run.id, run);
+				await scheduleNextTick(run.id, ctx);
+				return { ok: true, run };
+			},
+		},
+
+		"runs.deny": {
+			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
+				const body = routeCtx.input as { id?: string; reason?: string } | null;
+				if (!body?.id) return { ok: false, error: "id required" };
+				const run = (await ctx.storage.runs!.get(body.id)) as Run | null;
+				if (!run) return { ok: false, error: "Not found" };
+				if (run.status !== "awaiting_approval") {
+					return { ok: false, error: `Run not awaiting approval (status: ${run.status})` };
+				}
+				const pause = run.paused_for_human;
+				const reason = body.reason ?? "Operator denied the requested action";
+
+				if (pause?.kind === "tool-approval") {
+					// Synthesize a denial tool result so the model can react and
+					// either revise or stop.
+					const toolCall = pause.payload.tool_call as
+						| { id: string; function: { name: string } }
+						| undefined;
+					if (toolCall?.id) {
+						run.message_history = [
+							...run.message_history,
+							{
+								role: "tool",
+								tool_call_id: toolCall.id,
+								content: JSON.stringify({ ok: false, error: `denied: ${reason}` }),
+							},
+						];
+					}
+					await appendApprovalEvent(ctx, run, "deny", {
+						tool: toolCall?.function.name,
+						reason,
+					});
+				} else if (pause?.kind === "plan-review") {
+					run.message_history = [
+						...run.message_history,
+						{ role: "user", content: `Plan denied: ${reason}. Revise or stop.` },
+					];
+					await appendApprovalEvent(ctx, run, "deny", { kind: "plan-review", reason });
+				}
+
+				run.status = "queued";
+				run.paused_for_human = undefined;
+				run.approval_token = undefined;
+				run.updated_at = NOW();
+				await ctx.storage.runs!.put(run.id, run);
+				await scheduleNextTick(run.id, ctx);
 				return { ok: true, run };
 			},
 		},

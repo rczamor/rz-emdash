@@ -26,6 +26,8 @@ import type {
 	DriverHandlers,
 } from "@emdash-cms/plugin-llm-router";
 
+import { newApprovalToken } from "./approval.js";
+import { extractPlanBlock, parsePlan } from "./plan.js";
 import type { Run, RunEvent, RunEventKind } from "./types.js";
 
 const NOW = (): string => new Date().toISOString();
@@ -149,71 +151,140 @@ function estimateUsd(usage: { prompt_tokens: number; completion_tokens: number }
 	return inputCost + outputCost;
 }
 
+type ToolPause = { kind: string; tool: string; args?: Record<string, unknown>; reason?: string };
+type InvokeOutcome =
+	| { kind: "ok"; tool_call_id: string; content: string; output: unknown }
+	| { kind: "error"; tool_call_id: string; content: string; error: string }
+	| { kind: "paused"; tool_call_id: string; pause: ToolPause };
+
 async function invokeTool(
 	toolCall: ChatToolCall,
 	run: Run,
 	siteUrl: string,
 	ctx: PluginContext,
-): Promise<{ tool_call_id: string; content: string }> {
+	forceExecute = false,
+): Promise<InvokeOutcome> {
 	const start = Date.now();
-	let output: unknown;
-	let error: string | undefined;
 
 	if (!ctx.http) {
-		error = "network:fetch capability missing";
-	} else {
-		let parsed: Record<string, unknown> = {};
-		try {
-			parsed = JSON.parse(toolCall.function.arguments || "{}") as Record<string, unknown>;
-		} catch (err) {
-			error = `Failed to parse tool arguments: ${err instanceof Error ? err.message : String(err)}`;
-		}
-		if (!error) {
-			try {
-				const res = await ctx.http.fetch(`${siteUrl}/_emdash/api/plugins/tools/tools.invoke`, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						name: toolCall.function.name,
-						arguments: parsed,
-						taskId: run.task_id,
-						agentId: run.agent_id,
-					}),
-				});
-				if (!res.ok) {
-					error = `tools.invoke returned ${res.status}`;
-				} else {
-					const json = (await res.json()) as {
-						data?: { ok?: boolean; output?: unknown; error?: string };
-					};
-					const data = json.data ?? {};
-					if (data.ok === false) {
-						error = data.error ?? "Tool returned ok:false";
-					} else {
-						output = data.output;
-					}
-				}
-			} catch (err) {
-				error = err instanceof Error ? err.message : String(err);
+		const error = "network:fetch capability missing";
+		await persistToolCallEvent(ctx, run, toolCall, { error, duration_ms: 0 });
+		return {
+			kind: "error",
+			tool_call_id: toolCall.id,
+			content: JSON.stringify({ ok: false, error }),
+			error,
+		};
+	}
+
+	let parsed: Record<string, unknown> = {};
+	try {
+		parsed = JSON.parse(toolCall.function.arguments || "{}") as Record<string, unknown>;
+	} catch (err) {
+		const error = `Failed to parse tool arguments: ${err instanceof Error ? err.message : String(err)}`;
+		await persistToolCallEvent(ctx, run, toolCall, { error, duration_ms: Date.now() - start });
+		return {
+			kind: "error",
+			tool_call_id: toolCall.id,
+			content: JSON.stringify({ ok: false, error }),
+			error,
+		};
+	}
+
+	const invokeArgs = forceExecute ? { ...parsed, _force_execute: true } : parsed;
+
+	let output: unknown;
+	let error: string | undefined;
+	let pause: ToolPause | undefined;
+	try {
+		const res = await ctx.http.fetch(`${siteUrl}/_emdash/api/plugins/tools/tools.invoke`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: toolCall.function.name,
+				arguments: invokeArgs,
+				taskId: run.task_id,
+				agentId: run.agent_id,
+			}),
+		});
+		if (!res.ok) {
+			error = `tools.invoke returned ${res.status}`;
+		} else {
+			const json = (await res.json()) as {
+				data?: {
+					ok?: boolean;
+					output?: unknown;
+					error?: string;
+					paused_for_human?: ToolPause;
+				};
+			};
+			const data = json.data ?? {};
+			if (data.paused_for_human) {
+				pause = data.paused_for_human;
+			} else if (data.ok === false) {
+				error = data.error ?? "Tool returned ok:false";
+			} else {
+				output = data.output;
 			}
 		}
+	} catch (err) {
+		error = err instanceof Error ? err.message : String(err);
 	}
 
 	const durationMs = Date.now() - start;
-	const ordinal = await nextOrdinal(ctx, run);
-	await appendEvent(ctx, run, "tool-call", {
-		tool_call_id: toolCall.id,
-		name: toolCall.function.name,
-		arguments: toolCall.function.arguments,
+	await persistToolCallEvent(ctx, run, toolCall, {
 		output,
 		error,
+		paused: pause,
 		duration_ms: durationMs,
-	}, ordinal);
+	});
 
-	const content = error
-		? JSON.stringify({ ok: false, error })
-		: JSON.stringify(output ?? null);
-	return { tool_call_id: toolCall.id, content };
+	if (pause) {
+		return { kind: "paused", tool_call_id: toolCall.id, pause };
+	}
+	if (error) {
+		return {
+			kind: "error",
+			tool_call_id: toolCall.id,
+			content: JSON.stringify({ ok: false, error }),
+			error,
+		};
+	}
+	return {
+		kind: "ok",
+		tool_call_id: toolCall.id,
+		content: JSON.stringify(output ?? null),
+		output,
+	};
+}
+
+async function persistToolCallEvent(
+	ctx: PluginContext,
+	run: Run,
+	toolCall: ChatToolCall,
+	extra: {
+		output?: unknown;
+		error?: string;
+		paused?: ToolPause;
+		duration_ms: number;
+	},
+): Promise<void> {
+	const ordinal = await nextOrdinal(ctx, run);
+	await appendEvent(
+		ctx,
+		run,
+		"tool-call",
+		{
+			tool_call_id: toolCall.id,
+			name: toolCall.function.name,
+			arguments: toolCall.function.arguments,
+			output: extra.output,
+			error: extra.error,
+			paused: extra.paused,
+			duration_ms: extra.duration_ms,
+		},
+		ordinal,
+	);
 }
 
 /**
@@ -347,10 +418,63 @@ export async function tickRun(
 		duration_ms: callDuration,
 	}, llmOrdinal);
 
+	// M3 — plan block detection. If the assistant emitted a <plan>
+	// block, persist the parsed Plan and pause for human approval.
+	// The model has already completed its turn; the next tick will
+	// pick up post-resume.
+	const planBlock = extractPlanBlock(assistantMsg.content);
+	if (planBlock) {
+		const parsed = parsePlan(planBlock);
+		if (parsed.ok) {
+			run.status = "awaiting_approval";
+			run.paused_for_human = {
+				kind: "plan-review",
+				payload: { plan: parsed.plan as unknown as Record<string, unknown> },
+				created_at: NOW(),
+			};
+			run.approval_token = newApprovalToken();
+			run.updated_at = NOW();
+			await storage.runs.put(run.id, run);
+			const ordinal = await nextOrdinal(ctx, run);
+			await appendEvent(ctx, run, "human-pause", {
+				kind: "plan-review",
+				plan: parsed.plan,
+			}, ordinal);
+			return { done: false, scheduleNextTick: false, run };
+		}
+		// Malformed plan block — log and proceed; the model will retry.
+		const ordinal = await nextOrdinal(ctx, run);
+		await appendEvent(ctx, run, "error", {
+			message: `Failed to parse plan block: ${parsed.error}`,
+		}, ordinal);
+	}
+
 	// Tool execution — all tool calls of this iteration in this tick.
 	const toolCalls = assistantMsg.tool_calls ?? [];
 	for (const tc of toolCalls) {
 		const result = await invokeTool(tc, run, deps.siteUrl, ctx);
+		if (result.kind === "paused") {
+			run.status = "awaiting_approval";
+			run.paused_for_human = {
+				kind: "tool-approval",
+				payload: {
+					tool: result.pause.tool,
+					tool_call: tc as unknown as Record<string, unknown>,
+					reason: result.pause.reason ?? "Tool requires approval",
+				},
+				created_at: NOW(),
+			};
+			run.approval_token = newApprovalToken();
+			run.updated_at = NOW();
+			await storage.runs.put(run.id, run);
+			const ordinal = await nextOrdinal(ctx, run);
+			await appendEvent(ctx, run, "human-pause", {
+				kind: "tool-approval",
+				tool: result.pause.tool,
+				reason: result.pause.reason,
+			}, ordinal);
+			return { done: false, scheduleNextTick: false, run };
+		}
 		const toolMsg: ChatMessage = {
 			role: "tool",
 			tool_call_id: result.tool_call_id,
