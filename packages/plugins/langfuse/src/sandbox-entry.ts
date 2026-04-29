@@ -24,6 +24,7 @@ import { definePlugin } from "emdash";
 import type { PluginContext } from "emdash";
 
 import { getPrompt, ingest, listDatasetItems, type LangfuseConfig } from "./api.js";
+import { seedRoutines } from "./auto-routines.js";
 import type {
 	GenerationCreateBody,
 	IngestionEvent,
@@ -282,6 +283,10 @@ export default definePlugin({
 				ctx.log.info(
 					"Langfuse plugin installed (langfuse:trace / langfuse:score / langfuse:get-prompt actions registered)",
 				);
+				// M5 — auto-tracing routines. Idempotent upsert into the
+				// automations plugin's routines collection. Failures are
+				// logged but do not block install.
+				await seedRoutines(ctx);
 			},
 		},
 	},

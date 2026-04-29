@@ -23,6 +23,7 @@ import { registerJobHandler } from "@emdash-cms/plugin-scheduler/registry";
 
 import { tickRun } from "./loop.js";
 import type { Run, RunEvent, StartRunInput } from "./types.js";
+import { aggregateUsage, type UsageGroup, type UsagePeriod } from "./usage-summary.js";
 
 const NOW = (): string => new Date().toISOString();
 const TRAILING_SLASH_RE = /\/$/;
@@ -514,6 +515,20 @@ export default definePlugin({
 				await ctx.storage.runs!.put(run.id, run);
 				await scheduleNextTick(run.id, ctx);
 				return { ok: true, run };
+			},
+		},
+
+		"runs.usageSummary": {
+			handler: async (routeCtx: RouteCtx, ctx: PluginContext) => {
+				const period = (getQueryParam(routeCtx, "period") ?? "24h") as UsagePeriod;
+				const group_by = (getQueryParam(routeCtx, "group_by") ?? "agent") as UsageGroup;
+				const limit = 5000;
+				const result = await ctx.storage.runs!.query({
+					orderBy: { started_at: "desc" },
+					limit,
+				});
+				const runs = result.items.map((i) => i.data) as Run[];
+				return { ok: true, summary: aggregateUsage(runs, period, group_by) };
 			},
 		},
 
