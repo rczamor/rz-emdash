@@ -28,6 +28,7 @@ import type {
 
 import { newApprovalToken } from "./approval.js";
 import { extractPlanBlock, parsePlan } from "./plan.js";
+import { notifyRun } from "./stream.js";
 import type { Run, RunEvent, RunEventKind } from "./types.js";
 
 const NOW = (): string => new Date().toISOString();
@@ -76,6 +77,8 @@ async function appendEvent(
 		created_at: NOW(),
 	};
 	await getRunsStorage(ctx).run_events.put(event.id, event);
+	// M4 — fan out to any active SSE subscribers in this isolate.
+	notifyRun(event);
 }
 
 /**

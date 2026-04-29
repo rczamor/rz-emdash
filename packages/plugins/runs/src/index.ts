@@ -35,6 +35,22 @@ export type {
 	StartRunInput,
 } from "./types.js";
 
+/**
+ * SSE streaming primitive for run events.
+ *
+ * `streamRunEvents(runId, since_ordinal, ctx)` returns a Web Response
+ * with `text/event-stream` body. Consumers (e.g. the admin live
+ * supervision page in a future milestone) wire it into a custom
+ * Astro route that reads the run id from query params and the
+ * plugin context from `locals.emdash`.
+ *
+ * Cloudflare Workers caveat: subscribers only see events from the
+ * same isolate as the loop tick. Cross-isolate broadcast requires a
+ * Durable Object — deferred. The polling fallback `runs.events?since_ordinal=`
+ * remains correct in all cases.
+ */
+export { streamRunEvents } from "./stream.js";
+
 export interface RunsPluginOptions {
 	/**
 	 * Default per-run cap on iterations. A run that hits this without
